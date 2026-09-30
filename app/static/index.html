@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Music Master</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--fg:#e8eaf0;--mut:#8b92a5;--acc:#5ee0a0;--line:#2a2f3a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:24px 16px 64px}
+h1{margin:0 0 4px}p.sub{color:var(--mut);margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h2{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:0 0 12px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:24px;text-align:center;color:var(--mut);cursor:pointer}
+.drop.over,.drop.has{border-color:var(--acc);color:var(--fg)}
+input[type=text]{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#0f1115;color:var(--fg);font:inherit}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{flex:1;padding:8px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--mut);cursor:pointer;font:inherit}
+.tabs button.on{border-color:var(--acc);color:var(--fg)}
+.go{width:100%;padding:14px;border:0;border-radius:10px;background:var(--acc);color:#04140c;font:600 16px system-ui;cursor:pointer}
+.go:disabled{opacity:.4;cursor:default}
+.err{color:#ff8a8a;margin-top:12px}.hint{color:var(--mut);font-size:13px;margin:8px 0 0}
+.res li{padding:8px;border-radius:8px;cursor:pointer}.res li:hover{background:#0f1115}
+audio{width:100%;margin:6px 0 12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:12px 0}
+.stat{background:#0f1115;border-radius:8px;padding:10px}.stat b{display:block;font-size:20px}.stat span{color:var(--mut);font-size:12px}
+canvas{width:100%;height:220px;background:#0f1115;border-radius:8px}
+a.dl{display:inline-block;margin-top:12px;color:var(--acc)}
+</style>
+</head>
+<body>
+<main>
+<h1>Music Master</h1>
+<p class="sub">Upload your track, pick a reference that sounds the way you want, and get a mastered version matched in tone, width and loudness.</p>
+
+<div class="card"><h2>1 · Your track</h2>
+  <label class="drop" id="dropTrack">Drop audio here or click to choose (WAV, FLAC, MP3, OGG)
+    <input type="file" id="track" accept="audio/*" hidden></label></div>
+
+<div class="card"><h2>2 · Reference</h2>
+  <div class="tabs"><button class="on" data-tab="spotify">Spotify</button><button data-tab="file">Upload file</button></div>
+  <div id="tab-spotify">
+    <input type="text" id="link" placeholder="Paste a Spotify track link">
+    <div id="searchBox" hidden style="margin-top:10px">
+      <input type="text" id="q" placeholder="…or search Spotify">
+      <ul class="res" id="results" style="list-style:none;padding:0;margin:6px 0 0"></ul></div>
+    <p class="hint">Spotify only shares 30-second previews, so the match is based on that clip. For the most accurate result, upload the full reference file.</p>
+  </div>
+  <div id="tab-file" hidden><label class="drop" id="dropRef">Drop reference audio or click to choose
+    <input type="file" id="ref" accept="audio/*" hidden></label></div>
+</div>
+
+<button class="go" id="go" disabled>Master it</button>
+<div class="err" id="err"></div>
+
+<div class="card" id="out" hidden style="margin-top:16px"><h2>Result</h2>
+  <div>Original</div><audio id="aOrig" controls></audio>
+  <div>Mastered</div><audio id="aMast" controls></audio>
+  <div class="stats" id="stats"></div>
+  <canvas id="chart" width="700" height="220"></canvas>
+  <p class="hint">Grey: your track's spectrum · Blue: reference · Green: EQ applied</p>
+  <a class="dl" id="dl">Download mastered WAV (24-bit)</a>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let trackFile=null,refFile=null,tab='spotify';
+function wireDrop(box,input,set){
+  input.onchange=()=>set(input.files[0]);
+  box.ondragover=e=>{e.preventDefault();box.classList.add('over')};
+  box.ondragleave=()=>box.classList.remove('over');
+  box.ondrop=e=>{e.preventDefault();box.classList.remove('over');set(e.dataTransfer.files[0])};
+}
+function setBox(box,f){box.firstChild.textContent=f?f.name:box.firstChild.textContent;box.classList.toggle('has',!!f)}
+wireDrop($('dropTrack'),$('track'),f=>{trackFile=f;setBox($('dropTrack'),f);update()});
+wireDrop($('dropRef'),$('ref'),f=>{refFile=f;setBox($('dropRef'),f);update()});
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  tab=b.dataset.tab;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  $('tab-spotify').hidden=tab!=='spotify';$('tab-file').hidden=tab!=='file';update()});
+$('link').oninput=update;
+function update(){$('go').disabled=!(trackFile&&(tab==='file'?refFile:$('link').value.trim()))}
+fetch('/api/config').then(r=>r.json()).then(c=>{$('searchBox').hidden=!c.spotify_search});
+let t;$('q').oninput=()=>{clearTimeout(t);t=setTimeout(async()=>{
+  const q=$('q').value.trim();if(!q){$('results').innerHTML='';return}
+  const r=await fetch('/api/spotify/search?q='+encodeURIComponent(q));if(!r.ok)return;
+  $('results').innerHTML='';
+  for(const s of await r.json()){const li=document.createElement('li');li.textContent=s.name+' — '+s.artists;
+    li.onclick=()=>{$('link').value=s.url;$('results').innerHTML='';update()};$('results').appendChild(li)}
+},300)};
+$('go').onclick=async()=>{
+  $('err').textContent='';$('go').disabled=true;$('go').textContent='Mastering… this can take a minute';
+  const fd=new FormData();fd.append('track',trackFile);
+  if(tab==='file')fd.append('reference',refFile);else fd.append('spotify_link',$('link').value.trim());
+  try{
+    const r=await fetch('/api/master',{method:'POST',body:fd});const j=await r.json();
+    if(!r.ok)throw new Error(j.detail||'Mastering failed');show(j);
+  }catch(e){$('err').textContent=e.message}
+  $('go').textContent='Master it';update();
+};
+function show(j){
+  const r=j.report;$('out').hidden=false;
+  $('aOrig').src=URL.createObjectURL(trackFile);$('aMast').src='/api/download/'+j.job;
+  $('dl').href='/api/download/'+j.job+'?name='+encodeURIComponent(j.filename);
+  const st=[['Loudness',r.input_lufs+' → '+r.output_lufs+' LUFS'],['Reference',r.reference_lufs+' LUFS'],
+    ['Peak',r.output_peak_db+' dBFS'],['Stereo width','×'+r.stereo_width_ratio]];
+  $('stats').innerHTML=st.map(s=>`<div class="stat"><b>${s[1]}</b><span>${s[0]}</span></div>`).join('');
+  draw(r);$('out').scrollIntoView({behavior:'smooth'});
+}
+function draw(r){
+  const c=$('chart'),x=c.getContext('2d'),W=c.width,H=c.height;x.clearRect(0,0,W,H);
+  const n=r.eq_freqs.length,all=r.input_spectrum_db.concat(r.reference_spectrum_db);
+  const lo=Math.min(...all),hi=Math.max(...all);
+  const X=i=>10+i/(n-1)*(W-20),Y=(v)=>H-10-(v-lo)/(hi-lo)*(H-20);
+  const line=(arr,col,f)=>{x.beginPath();arr.forEach((v,i)=>i?x.lineTo(X(i),f(v)):x.moveTo(X(i),f(v)));x.strokeStyle=col;x.lineWidth=2;x.stroke()};
+  line(r.input_spectrum_db,'#8b92a5',Y);line(r.reference_spectrum_db,'#5aa9ff',Y);
+  line(r.eq_gain_db,'#5ee0a0',v=>H/2-v*(H/2-20)/9);
+}
+</script>
+</body>
+</html>
