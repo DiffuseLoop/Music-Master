@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3f6b4f">
+<title>Sous – AI Cooking Assistant (Prototype)</title>
+<style>
+:root{
+  --bg:#fbfaf6; --card:#ffffff; --ink:#1f2a24; --muted:#6b776f; --line:#e6e4dc;
+  --brand:#3f6b4f; --brand-d:#2f5440; --brand-l:#e6efe8; --warn:#c0563a; --warn-l:#fbebe5;
+  --amber:#b7791f; --amber-l:#fbf1dc; --bar-h:76px; --r:18px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#e9e7df;color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:16px;line-height:1.4}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.phone{position:relative;margin:0 auto;height:100vh;height:100dvh;max-width:480px;background:var(--bg);overflow:hidden;
+  display:flex;flex-direction:column}
+@media(min-width:520px){.phone{height:min(880px,96vh);margin-top:2vh;border-radius:32px;box-shadow:0 20px 60px rgba(0,0,0,.18)}}
+#app{flex:1;min-height:0;position:relative}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.top{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 4px;min-height:56px}
+.top .ttl{font-size:13px;color:var(--muted);text-align:center;flex:1;letter-spacing:.02em}
+.icon-btn{width:44px;height:44px;border-radius:50%;font-size:22px;display:grid;place-items:center}
+.icon-btn:active{background:var(--line)}
+.body{flex:1;overflow-y:auto;padding:8px 22px 24px}
+.foot{padding:10px 22px calc(18px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 30%)}
+h1{font-size:28px;line-height:1.15;margin:8px 0 8px;letter-spacing:-.02em}
+h2{font-size:15px;margin:22px 0 8px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+p.sub{color:var(--muted);margin:0 0 18px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;border-radius:20px;
+  background:var(--brand);color:#fff;font-weight:650;font-size:17px;padding:0 20px;transition:transform .1s,background .2s}
+.btn:active{transform:scale(.98);background:var(--brand-d)}
+.btn.sec{background:var(--brand-l);color:var(--brand-d)}
+.btn.ghost{background:transparent;color:var(--muted);min-height:48px;font-weight:500;font-size:15px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.btn+.btn{margin-top:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.card+.card{margin-top:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:12px;transition:border-color .15s,background .15s}
+.opt.on{border-color:var(--brand);background:var(--brand-l)}
+.opt .lab{font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.opt .prev{margin-top:6px;color:#3a463f;font-size:14.5px}
+.opt .tag{font-size:12px;color:var(--brand-d);font-weight:600}
+.note{background:var(--amber-l);color:#7a5614;border-radius:14px;padding:12px 14px;font-size:14px;margin-top:6px}
+.dots{display:flex;gap:6px;justify-content:center;margin:2px 0 6px}
+.dots i{width:22px;height:4px;border-radius:2px;background:var(--line)}
+.dots i.on{background:var(--brand)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:10px;width:100%;text-align:left;min-height:56px}
+.sw{width:50px;height:30px;border-radius:15px;background:#d3d6d0;position:relative;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.sw.on{background:var(--brand)}.sw.on::after{transform:translateX(20px)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:12px 4px;text-align:center;font-size:12.5px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.tile .ic{font-size:28px}.tile.on{border-color:var(--brand);background:var(--brand-l);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:42px;padding:0 14px;border-radius:21px;background:var(--card);border:1.5px solid var(--line);font-size:15px}
+.chip.on{background:var(--brand-l);border-color:var(--brand);color:var(--brand-d);font-weight:600}
+.chip.add{border-style:dashed;color:var(--muted)}
+.chip.sm{min-height:34px;font-size:13.5px;padding:0 11px}
+.chip.static{background:#f1f0ea;border-color:transparent;color:#47534b}
+.field{display:flex;gap:8px;margin-bottom:12px}
+.field input,.sel{flex:1;min-height:54px;border-radius:16px;border:1.5px solid var(--line);padding:0 16px;background:#fff;outline:none;width:100%}
+.field input:focus,.sel:focus{border-color:var(--brand)}
+.field .btn{width:auto;min-height:54px;padding:0 22px}
+input[type=range]{width:100%;accent-color:var(--brand);height:36px}
+.big{font-size:44px;font-weight:700;letter-spacing:-.03em}
+.center{text-align:center}
+.banner{display:flex;gap:12px;align-items:center;background:var(--amber-l);border:1px solid #efd9a5;border-radius:18px;padding:14px;margin-bottom:16px;width:100%;text-align:left}
+.banner b{display:block}.banner span{font-size:13.5px;color:#7a5614}
+.rc h3{margin:0 0 8px;font-size:19px}
+.rc .meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.rc .btn{min-height:50px;font-size:16px}
+.chk{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);width:100%;text-align:left;min-height:52px}
+.chk .bx{width:26px;height:26px;border-radius:8px;border:2px solid #c5c9c1;display:grid;place-items:center;color:#fff;font-size:15px;flex:none}
+.chk.on .bx{background:var(--brand);border-color:var(--brand)}
+.chk:not(.on) .nm{color:var(--muted);text-decoration:line-through}
+.spin{width:44px;height:44px;border-radius:50%;border:4px solid var(--brand-l);border-top-color:var(--brand);animation:sp .8s linear infinite;margin:0 auto 18px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.skel{height:130px;border-radius:18px;background:linear-gradient(90deg,#efede6 25%,#f7f6f1 50%,#efede6 75%);background-size:200% 100%;animation:sh 1.1s infinite;margin-bottom:12px}
+@keyframes sh{to{background-position:-200% 0}}
+/* cook mode */
+.prog{display:flex;gap:4px;padding:0 16px}
+.prog i{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.prog i.done{background:var(--brand)}.prog i.cur{background:var(--brand);opacity:.55}
+.cookbody{flex:1;overflow-y:auto;padding:14px 24px 16px;touch-action:pan-y}
+.cookbody.fwd{animation:inR .28s ease}.cookbody.bwd{animation:inL .28s ease}
+@keyframes inR{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+@keyframes inL{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+.stepno{color:var(--muted);font-size:14px;font-weight:600}
+.heat{display:inline-flex;gap:6px;background:var(--brand-l);color:var(--brand-d);border-radius:14px;padding:4px 10px;font-size:13px;font-weight:600;margin:8px 0 4px}
+.steptitle{font-size:15px;color:var(--muted);margin:6px 0 4px}
+.steptext{font-size:25px;line-height:1.3;font-weight:600;letter-spacing:-.01em;margin:6px 0 18px}
+.steptext.small{font-size:22px;font-weight:550}
+details{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:0 14px;margin-bottom:10px}
+summary{min-height:50px;display:flex;align-items:center;font-weight:600;font-size:15px;cursor:pointer;list-style:none}
+summary::-webkit-details-marker{display:none}
+details ul{margin:0 0 12px;padding-left:20px;color:#3a463f;font-size:15px}
+details li{margin-bottom:6px}
+.bar{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line);position:relative;z-index:30;min-height:var(--bar-h)}
+.bar button{min-height:60px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:#3a463f;background:#f4f3ee}
+.bar button span{font-size:22px;line-height:1}
+.bar button:active{background:var(--line)}
+.bar button.nx{background:var(--brand);color:#fff}
+.bar button[disabled]{opacity:.35;pointer-events:none}
+#scrim{position:absolute;left:0;right:0;top:0;bottom:calc(var(--bar-h) + env(safe-area-inset-bottom));background:rgba(20,30,24,.35);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
+#scrim.on{opacity:1;pointer-events:auto}
+#sheet{position:absolute;left:0;right:0;bottom:calc(var(--bar-h) + env(safe-area-inset-bottom));background:#fff;border-radius:26px 26px 0 0;
+  box-shadow:0 -8px 30px rgba(0,0,0,.14);z-index:25;max-height:68%;overflow-y:auto;transform:translateY(110%);transition:transform .32s cubic-bezier(.2,.8,.2,1);padding:0 20px 18px}
+#sheet.open{transform:none}
+#sheet.mini{transform:translateY(calc(100% - 92px));cursor:pointer;overflow:hidden}
+.grab{width:40px;height:5px;border-radius:3px;background:#d6d8d2;margin:10px auto 12px}
+.ans{background:var(--brand-l);border-radius:16px;padding:12px 14px;margin-bottom:12px;font-size:16px}
+.ans small{display:block;color:var(--brand-d);font-weight:700;margin-bottom:2px}
+.ans .long{margin-top:8px;padding-top:8px;border-top:1px solid #c9dccf;font-size:14.5px;color:#2e3b33}
+.ans .more{color:var(--brand-d);font-weight:700;margin-top:6px;min-height:36px;text-decoration:underline}
+.sheethead{font-weight:700;font-size:18px;margin-bottom:4px}
+.sheetsub{color:var(--muted);font-size:14px;margin-bottom:12px}
+#timers{position:absolute;top:60px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:15;align-items:flex-end}
+.tchip{background:var(--ink);color:#fff;border-radius:20px;padding:8px 14px;font-weight:650;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25);font-variant-numeric:tabular-nums}
+#toast{position:absolute;left:12px;right:12px;top:10px;z-index:50;transform:translateY(-140%);transition:transform .35s cubic-bezier(.2,.8,.2,1);pointer-events:none}
+#toast.on{transform:none;pointer-events:auto}
+.toast{display:flex;gap:12px;align-items:center;background:rgba(31,42,36,.96);color:#fff;border-radius:20px;padding:14px 16px;width:100%;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.toast .ti{font-size:26px}.toast small{display:block;opacity:.65;font-size:12px}
+.fbopt{display:flex;align-items:center;gap:14px;width:100%;background:#fff;border:2px solid var(--line);border-radius:20px;padding:16px;margin-bottom:12px;font-size:18px;font-weight:650;min-height:68px}
+.fbopt .e{font-size:32px}.fbopt.on{border-color:var(--brand);background:var(--brand-l)}
+.hist{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:10px;min-height:68px}
+.pill{font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;background:#eee;color:#555}
+.pill.l{background:#dff0e4;color:#2f5440}.pill.g{background:#e7eef9;color:#2b4c80}.pill.n{background:var(--warn-l);color:var(--warn)}
+ol.steps{padding-left:20px;margin:0}ol.steps li{margin-bottom:8px}
+.splash{align-items:center;justify-content:center;text-align:center;background:var(--brand);color:#fff}
+.splash .logo{font-size:72px}.splash h1{margin:6px 0 0;font-size:34px}
+.hero{font-size:84px;text-align:center;margin:30px 0 10px}
+.link{color:var(--muted);font-size:13px;text-decoration:underline;padding:10px;min-height:44px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div id="app"></div>
+  <div id="timers"></div>
+  <div id="scrim" data-act="closeSheet"></div>
+  <div id="sheet"></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================== MOCK DATA ============================== */
+const STAPLES=["salt","black pepper","olive oil","vegetable oil","butter","garlic","onion","flour","sugar","soy sauce","vinegar","chili flakes","oregano","stock cubes","eggs","rice","pasta","canned tomatoes","lemon","paprika","cumin","honey","mustard","milk","parmesan","sesame oil","ginger","spring onion","baking powder","coconut milk","tahini","cinnamon"];
+const DEFAULT_PANTRY=["salt","black pepper","olive oil","vegetable oil","butter","garlic","onion","flour","sugar","soy sauce","vinegar","chili flakes","oregano","stock cubes"];
+const DIET=["Vegetarian","Vegan","Pescatarian","Gluten-free","Dairy-free","Nut-free","Halal","Kosher","Low-carb","No pork"];
+const EQUIP=[["stove","🔥"],["oven","♨️"],["microwave","📡"],["blender","🥤"],["immersion blender","🪄"],["air fryer","🌬️"],["rice cooker","🍚"],["pressure cooker","⏲️"],["grill","🥩"],["scale","⚖️"],["thermometer","🌡️"],["vacuum sealer","📦"],["dutch oven","🍲"],["cast iron pan","🍳"],["stainless steel pan","🥘"],["wok","🥡"],["peeler","🥕"],["grater","🧀"],["tongs","🦞"],["strainer","🥣"],["salad spinner","🥗"],["potato ricer","🥔"]];
+const ING_QUICK=["tomatoes","garlic","pasta","eggs","rice","onion","carrots","spinach","chicken","mushrooms","potatoes","peas"];
+const CUISINES=["Any","Italian","Chinese-inspired","Mexican","Indian","Mediterranean","Japanese","American"];
+const FB_CHIPS=["Great flavor","Easy to follow","Would cook again","Too salty","Too bland","Too watery","Took too long","Too much effort"];
+
+const SETS=[
+ [ {id:"garlic-chili-pasta",base:"pasta",title:"Garlic Chili Tomato Pasta",time:25,cuisine:"Italian",core:["pasta","tomato","garlic"],pantry:["olive oil","salt","black pepper","chili flakes"],extras:["fresh basil","parmesan","a pinch of sugar"]},
+   {id:"veggie-egg-fried-rice",base:"rice",title:"Veggie Egg Fried Rice",time:20,cuisine:"Chinese-inspired",core:["rice","egg","onion","carrot","pea"],pantry:["vegetable oil","soy sauce","salt","black pepper"],extras:["spring onion","sesame oil","frozen peas"]},
+   {id:"lemon-garlic-pasta",base:"pasta",title:"Lemon Garlic Butter Pasta",time:20,cuisine:"Mediterranean",core:["pasta","garlic","spinach"],pantry:["butter","olive oil","salt","black pepper"],extras:["lemon","parmesan"]} ],
+ [ {id:"spicy-tomato-rice",base:"rice",title:"Spicy Tomato Rice Bowl",time:30,cuisine:"Indian",core:["rice","tomato","onion","pea"],pantry:["vegetable oil","chili flakes","cumin","salt"],extras:["fresh coriander","yogurt","lime"]},
+   {id:"creamy-garlic-pasta",base:"pasta",title:"Creamy Garlic Mushroom Pasta",time:30,cuisine:"Italian",core:["pasta","mushroom","garlic","spinach"],pantry:["butter","olive oil","salt","black pepper"],extras:["cream","parmesan"]},
+   {id:"fried-egg-rice",base:"rice",title:"Crispy Egg & Soy Rice",time:15,cuisine:"Japanese",core:["rice","egg","onion","spinach"],pantry:["soy sauce","vegetable oil","sugar","salt"],extras:["nori","sesame seeds","kimchi"]} ]
+];
+const mk=(title,heat,short,standard,guided,cues,fails,timers)=>({title,heat_level:heat,short,standard,guided,success_cues:cues,failure_modes:fails,timers:timers||[]});
+const RECIPES={
+ pasta:{servings:2,steps:[
+  mk("Get set up","Off","Slice garlic, chop tomatoes, measure pasta.","Thinly slice 3 garlic cloves. Chop the tomatoes (or open the can). Measure about 100 g pasta per person and fill a large pot with water.","Before any heat goes on, get everything ready — cooks call this mise en place. Peel 3 garlic cloves and slice them thin, like coins. Chop the tomatoes into rough chunks, or open the can. Weigh about 100 g of pasta per person and fill a large pot three-quarters full of water. With everything within reach, nothing burns while you hunt for an ingredient.",["Garlic sliced evenly","Everything within arm's reach"],[{issue:"Garlic slices uneven",fix:"Uneven slices burn at different speeds, so trim the thick ones thinner before they hit the pan."}]),
+  mk("Boil the water","High","Salt the water, bring to a rolling boil.","Put the pot on high heat with a generous pinch of salt (about 1 tablespoon). Cover and bring to a full rolling boil.","Set the pot on your biggest burner on high heat and add about a tablespoon of salt — the water should taste like mild sea water. Put the lid on, which makes it boil much faster. You're waiting for big, constant bubbles across the whole surface, not just tiny ones at the edge. This usually takes 8–10 minutes.",["Large bubbles break the whole surface","Water keeps bubbling when you stir it"],[{issue:"Water is slow to boil",fix:"Cover the pot and check that the burner is on high; it can take up to 10 minutes."}],[{label:"Water to boil",seconds:480}]),
+  mk("Sizzle garlic & chili","Medium-low","Warm 3 tbsp oil, cook garlic + chili 1 min.","In a wide pan, warm 3 tbsp olive oil over medium-low heat. Add the garlic and chili flakes and cook about 1 minute until fragrant and barely golden.","Put a wide pan on medium-low heat and add 3 tablespoons of olive oil. Once the oil shimmers, add the sliced garlic and a big pinch of chili flakes. Gentle heat matters here: garlic goes from golden to bitter in seconds. If it sizzles loudly, turn the heat down and keep stirring for about a minute.",["Smells sweet and garlicky","Edges are pale gold, not brown"],[{issue:"Burnt garlic",fix:"Burnt garlic turns bitter, so wipe out the pan, add fresh oil and restart on lower heat."}],[{label:"Garlic",seconds:60}]),
+  mk("Add the tomatoes","Medium","Add tomatoes and a pinch of salt; stir.","Add the tomatoes and a pinch of salt to the pan. Stir well, scraping up any garlic from the bottom.","Tip the tomatoes into the pan — stand back a little, it will spit. Add a pinch of salt (it pulls out juices) and stir, scraping up anything stuck to the bottom. Turn the heat to medium so the tomatoes start to bubble gently.",["Tomatoes hiss and start to soften","Oil turns a light red"],[{issue:"Sauce too thick or dry",fix:"Add a splash of water so the sauce doesn't catch on the pan."}]),
+  mk("Simmer the sauce","Medium-low","Simmer 8 min, stirring now and then.","Lower the heat to medium-low and simmer 8 minutes, stirring occasionally, until the sauce thickens.","Turn the heat down to medium-low so you see lazy bubbles, not a hard boil. Let it simmer for about 8 minutes, stirring every minute or two. It's ready when the sauce looks thicker and a spoon dragged across the pan leaves a trail.",["Sauce coats the back of a spoon","Oil shimmers at the edges"],[{issue:"Sauce too watery",fix:"Raise the heat slightly and simmer uncovered 2–3 more minutes."},{issue:"Sauce sticking",fix:"Lower the heat and stir in a splash of water."}],[{label:"Simmer sauce",seconds:480}]),
+  mk("Cook the pasta","High","Add pasta to boiling water, 9 min.","Add the pasta to the boiling water, stir, and cook about 9 minutes — 1 minute less than the packet says.","Drop the pasta into the boiling water and stir right away so it doesn't stick together. Set a timer for 1 minute less than the packet says (about 9 minutes), because it finishes cooking in the sauce. Keep the water bubbling, and keep the sauce on its lowest heat meanwhile.",["Pasta bends but has a slight bite in the middle","Water turns cloudy with starch"],[{issue:"Pasta sticking together",fix:"Stir right away and keep the water at a rolling boil."}],[{label:"Pasta",seconds:540}]),
+  mk("Save water & drain","Off","Scoop 1 cup pasta water, then drain.","Scoop out 1 cup of the cloudy pasta water, then drain the pasta in a strainer.","Before draining, dip a mug into the pot and save 1 cup of the cloudy water — it's liquid gold for the sauce. Then carefully pour the pasta into a strainer in the sink, away from your face to avoid steam.",["A mug of cloudy pasta water is saved","Pasta is drained but not rinsed"],[{issue:"Forgot pasta water",fix:"Use hot tap water with a pinch of salt as a backup."}]),
+  mk("Season & taste","Low","Taste sauce; adjust salt, pepper, sugar.","Taste the sauce. Add salt and pepper as needed, and a pinch of sugar if it tastes sharp.","Take a small spoonful of sauce, let it cool a moment, and taste. Is it flat? Add salt, a pinch at a time. Sharp or sour? Add a pinch of sugar. Finish with a few grinds of black pepper and taste again.",["Balanced — not sharp, not flat","You'd happily eat it on its own"],[{issue:"Too salty",fix:"Add a splash of water and a squeeze of lemon; the pasta will absorb the rest."},{issue:"Too bland",fix:"Add salt a pinch at a time, then a drizzle of olive oil."}]),
+  mk("Toss together","Medium","Pasta + ¼ cup pasta water in pan; toss 1 min.","Add the pasta and ¼ cup pasta water to the pan. Toss over medium heat for 1 minute until glossy.","Tip the drained pasta into the sauce with about ¼ cup of the saved pasta water. Toss with tongs over medium heat for about a minute. The starch in the water helps the sauce cling and turn glossy. Add more water a splash at a time if it looks dry.",["Sauce clings to every piece of pasta","Looks glossy, not watery"],[{issue:"Too watery",fix:"Keep tossing over medium heat another minute so the sauce reduces and clings."},{issue:"Too thick",fix:"Add pasta water a splash at a time until loose and glossy."}],[{label:"Toss",seconds:60}]),
+  mk("Plate & finish","Off","Plate; drizzle oil, add basil/parmesan.","Divide into warm bowls. Finish with a drizzle of olive oil and basil or parmesan if you have them.","Use tongs to twirl the pasta into two warm bowls, then spoon over any sauce left in the pan. Drizzle a little olive oil on top and add basil or grated parmesan if you have them. Eat while it's hot.",["Hot, glossy and fragrant","Sauce pooled lightly at the bottom of the bowl"],[{issue:"Pasta cooling too fast",fix:"Warm the bowls under hot tap water first."}])
+ ]},
+ rice:{servings:2,steps:[
+  mk("Prep everything","Off","Chop veg small, whisk eggs, break up cold rice.","Chop the vegetables small. Whisk 2 eggs with a pinch of salt. Break up any clumps in the cold cooked rice.","Fried rice moves fast, so prep first. Chop vegetables into small, even pieces so they cook quickly. Crack 2 eggs into a bowl and whisk with a pinch of salt. Use your fingers to break up clumps of cold, day-old rice — cold rice fries better than warm.",["Rice grains separate","Everything is chopped and in bowls"],[{issue:"Rice is warm and mushy",fix:"Spread it on a tray for 10 minutes, or chill it briefly in the freezer."}]),
+  mk("Heat the pan","High","Heat pan until very hot, add 2 tbsp oil.","Heat a large pan or wok over high heat until very hot. Add 2 tablespoons of oil and swirl.","Put your largest pan or wok on high heat for about a minute, until a drop of water sizzles away instantly. Add 2 tablespoons of neutral oil and swirl to coat. A very hot pan is the secret to fried rice that doesn't turn soggy.",["Oil shimmers","A thin wisp of smoke rises"],[{issue:"Oil smoking heavily",fix:"Pull off the heat for 20 seconds and lower the flame a little."}]),
+  mk("Scramble the eggs","Medium-high","Pour in eggs, scramble 45 sec, set aside.","Pour in the eggs and scramble for about 45 seconds until just set. Tip onto a plate.","Pour the whisked eggs into the hot pan. Let them sit for a few seconds, then push and fold with a spatula. When they're mostly set but still a little glossy (about 45 seconds), tip them onto a plate — they'll finish cooking later.",["Soft, fluffy curds","No brown crust"],[{issue:"Eggs overcooked and dry",fix:"Take them off the heat sooner next time; they'll still be tasty in the rice."}],[{label:"Eggs",seconds:45}]),
+  mk("Fry the vegetables","High","Add veg, stir-fry 2 min.","Add a little more oil and the vegetables. Stir-fry for about 2 minutes until bright and slightly tender.","Add another splash of oil and tip in the vegetables. Keep them moving with a spatula for about 2 minutes. Harder vegetables like carrot go in first. They should look bright and be crisp-tender, not soft.",["Colors are bright","Edges lightly browned"],[{issue:"Veg steaming, not frying",fix:"The pan is overcrowded or too cool: raise the heat and cook in two batches."}],[{label:"Veg",seconds:120}]),
+  mk("Add the rice","High","Add rice, press and toss for 3 min.","Add the rice. Press it against the pan, then toss. Repeat for about 3 minutes until hot and dry.","Add the rice and break up any last clumps with the back of the spatula. Press it flat against the pan for a few seconds, then toss, and repeat for about 3 minutes. The rice should be steaming hot and feel dry, with grains that bounce.",["Rice is steaming hot all the way through","Grains are separate and bouncy"],[{issue:"Rice sticking to the pan",fix:"Add a teaspoon of oil and scrape the bottom, keeping the heat high."},{issue:"Too thick and clumpy",fix:"Splash in a spoonful of water and toss to loosen it up."}],[{label:"Rice",seconds:180}]),
+  mk("Season","Medium-high","Add soy sauce around the edge; toss.","Drizzle 2 tbsp soy sauce around the edge of the pan. Add pepper and toss to combine.","Drizzle about 2 tablespoons of soy sauce around the edge of the pan, not onto the rice — it sizzles and caramelizes on the hot metal. Add a few grinds of pepper and toss everything together until evenly brown. Taste and add salt if needed.",["Rice is evenly golden-brown","Smells toasty and savory"],[{issue:"Too salty",fix:"Add more plain rice or an extra egg to dilute the salt."},{issue:"Too bland",fix:"Add soy sauce a teaspoon at a time and a pinch of sugar."}]),
+  mk("Combine & crisp","High","Return eggs; let sit 20 sec to crisp.","Return the eggs to the pan and toss. Let the rice sit still for 20 seconds to crisp slightly.","Tip the eggs back in and break them into small pieces as you toss. Then leave the rice alone for 20 seconds so the bottom gets a little crisp. Toss once more.",["Eggs evenly mixed in","Some grains look golden and crisp"],[{issue:"Burnt bottom",fix:"Scrape up the burnt bits quickly and lower the heat; skip the crisping."}],[{label:"Crisp",seconds:20}]),
+  mk("Plate & finish","Off","Plate; add spring onion or sesame oil.","Serve in warm bowls. Top with spring onion or a few drops of sesame oil if you have them.","Spoon the rice into warm bowls. If you have spring onion, scatter it over the top, and add a few drops of sesame oil for a nutty aroma. Serve right away while it's hot.",["Piping hot and fluffy","Colorful and fragrant"],[{issue:"Rice cooling too fast",fix:"Warm the bowls under hot tap water first."}])
+ ]}
+};
+const FIX_RESP={
+ "Too salty":{key:"salty",text:"Add a splash of water or unsalted liquid, plus a little acid like lemon or vinegar. Stretch it with plain rice, pasta or potato if you can."},
+ "Too bland":{key:"bland",text:"Add a pinch of salt first, then a squeeze of lemon or a splash of vinegar. Finish with something fresh or fatty, like herbs or olive oil."},
+ "Too watery":{key:"watery",text:"Turn the heat up and simmer uncovered, stirring now and then. Hold off on extra salt until it reduces."},
+ "Too thick":{key:"thick",text:"Stir in a splash of hot water or pasta water, a spoonful at a time. Taste and adjust the seasoning afterwards."},
+ "Burnt":{key:"burnt",text:"Move the food to a clean pan right away, leaving the burnt bits behind. If it tastes bitter, add a pinch of sugar or a squeeze of lemon."}
+};
+
+/* ============================== STATE ============================== */
+const KEY="sous_prototype_v1";
+const defaults=()=>({settings:{skill_level:"standard",dietary_rules:[],equipment:["stove","oven","cast iron pan"],pantry_items:DEFAULT_PANTRY.slice(),shopping_tolerance:"flexible",onboarded:false},
+  last_session:null,feedback_pending:false,last_recipe_title:null,history:[],current_recipe:null});
+let S;
+function load(){try{const raw=JSON.parse(localStorage.getItem(KEY));S=raw?Object.assign(defaults(),raw):defaults();S.settings=Object.assign(defaults().settings,S.settings||{})}catch(e){S=defaults()}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+load();
+const R={stack:[],screen:"splash",params:{},ings:[],time:30,cuisine:"Any",round:0,briefs:[],brief:null,conf:null,recipe:null,step:0,dir:"fwd",
+  sheet:null,timers:[],editing:false,fbPick:null,fbChips:[],toastTimer:null,homeToast:null,miniTimer:null,pantryQ:""};
+
+/* ============================== HELPERS ============================== */
+const $=s=>document.querySelector(s);
+const e=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+const toggle=(arr,v)=>{const i=arr.indexOf(v);i>=0?arr.splice(i,1):arr.push(v)};
+const TOL={strict:0,flexible:2,open:9};
+const extrasFor=b=>b.extras.slice(0,TOL[S.settings.shopping_tolerance]);
+const usesCount=b=>{const m=R.ings.filter(i=>b.core.some(c=>i.toLowerCase().includes(c)||c.includes(i.toLowerCase()))).length;return Math.max(m,Math.min(1,R.ings.length))};
+const dateLabel=iso=>new Date(iso).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+const OUT={loved:["Loved it","😍","l"],good:["Good","🙂","g"],notgreat:["Not great","😕","n"]};
+
+/* ============================== ROUTER ============================== */
+function go(name,params,opts){opts=opts||{};
+  if(opts.reset)R.stack=[];else if(R.screen!=="splash"&&!opts.replace)R.stack.push({screen:R.screen,params:R.params});
+  R.screen=name;R.params=params||{};render()}
+function back(){const p=R.stack.pop();if(!p){go("home",{},{reset:true});return}R.screen=p.screen;R.params=p.params;render()}
+function loading(msg,ms,fn){const prev={screen:R.screen,params:R.params};R.screen="loading";R.params={msg};render();
+  setTimeout(()=>{R.screen=prev.screen;R.params=prev.params;fn()},ms)}
+function render(){
+  clearTimeout(R.homeToast);R.homeToast=null;
+  const fn=SCREENS[R.screen];$("#app").innerHTML=fn();
+  const h=AFTER[R.screen];if(h)h();
+  if(R.screen!=="cook")closeSheet(true);
+  renderTimers();
+}
+function shell(o){
+  const left=o.back?`<button class="icon-btn" data-act="back" aria-label="Back">←</button>`:`<span style="width:44px"></span>`;
+  return `<section class="scr">${o.head===false?"":`<header class="top">${left}<div class="ttl">${o.title||""}</div><div style="width:44px">${o.right||""}</div></header>`}
+  <div class="body">${o.body}</div>${o.foot?`<footer class="foot">${o.foot}</footer>`:""}</section>`}
+const dots=n=>`<div class="dots">${[1,2,3,4,5].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</div>`;
+const nextBtn=(to,label)=>R.editing?`<button class="btn" data-act="saveEdit">Save</button>`:`<button class="btn" data-act="onb" data-to="${to}">${label||"Continue"}</button>`;
+
+/* ============================== SCREENS ============================== */
+const SKILL_PREV={
+ guided:["Guided","Full explanations","Warm 3 tbsp oil in a wide pan over medium-low heat. Add sliced garlic and chili and stir gently for about a minute — if it sizzles loudly, turn the heat down, because garlic turns bitter fast."],
+ standard:["Standard","Clear steps","Warm 3 tbsp olive oil over medium-low. Add garlic and chili; cook about 1 minute until fragrant."],
+ concise:["Concise","Just the essentials","Oil, garlic, chili: medium-low, 1 min."]};
+const SCREENS={
+ splash:()=>`<section class="scr splash"><div class="logo">🍳</div><h1>Sous</h1><p style="opacity:.8">Your calm kitchen co-pilot</p></section>`,
+ loading:()=>`<section class="scr" style="align-items:center;justify-content:center;text-align:center;padding:30px"><div class="spin"></div><h1 style="font-size:22px">${e(R.params.msg)}</h1><p class="sub">Just a moment…</p></section>`,
+ welcome:()=>shell({head:false,body:`<div class="hero">🥘</div><h1 class="center">Cook what you have.<br>Cook it well.</h1><p class="sub center">Sous suggests recipes from your ingredients and guides you one calm step at a time.</p>
+  <div class="card"><p style="margin:0">🧅 Tell me what's in your kitchen<br>🍽️ Get 3 recipe ideas in seconds<br>👣 Cook one step at a time, with help on tap</p></div>`,
+  foot:`<button class="btn" data-act="onb" data-to="skill">Get started</button>`}),
+ skill:()=>shell({back:true,title:R.editing?"Preferences":"Step 1 of 5",body:`${R.editing?"":dots(1)}<h1>How skilled are you in the kitchen?</h1><p class="sub">Same step, three levels of detail. Pick the one that feels right.</p>
+  ${["guided","standard","concise"].map(k=>`<button class="opt ${S.settings.skill_level===k?"on":""}" data-act="skill" data-v="${k}"><div class="lab"><span>${SKILL_PREV[k][0]}</span><span class="tag">${SKILL_PREV[k][1]}</span></div><div class="prev">${e(SKILL_PREV[k][2])}</div></button>`).join("")}
+  <div class="note">🤝 I will take this seriously, but you can always change it later.</div>`,foot:nextBtn("diet")}),
+ diet:()=>shell({back:true,title:R.editing?"Dietary rules":"Step 2 of 5",right:R.editing?"":`<button class="link" data-act="onb" data-to="equip">Skip</button>`,body:`${R.editing?"":dots(2)}<h1>Any dietary rules?</h1><p class="sub">I'll keep every suggestion within them.</p>
+  ${DIET.map(d=>`<button class="row" data-act="diet" data-v="${d}"><span>${d}</span><span class="sw ${S.settings.dietary_rules.includes(d)?"on":""}"></span></button>`).join("")}`,foot:nextBtn("equip")}),
+ equip:()=>shell({back:true,title:R.editing?"Equipment":"Step 3 of 5",body:`${R.editing?"":dots(3)}<h1>What's in your kitchen?</h1><p class="sub">Tap everything you have. I'll only suggest what you can cook.</p>
+  <div class="grid">${EQUIP.map(([n,i])=>`<button class="tile ${S.settings.equipment.includes(n)?"on":""}" data-act="equip" data-v="${n}"><span class="ic">${i}</span>${cap(n)}</button>`).join("")}</div>`,foot:nextBtn("pantry")}),
+ pantry:()=>shell({back:true,title:R.editing?"Pantry":"Step 4 of 5",body:`${R.editing?"":dots(4)}<h1>What's in your pantry?</h1><p class="sub">Staples I can assume you have. Add as many as you like.</p>
+  <form class="field" id="pantryForm" autocomplete="off"><input id="pantryIn" placeholder="Search or add an item…" enterkeyhint="done"><button class="btn" type="submit">Add</button></form>
+  <div id="pantryDyn"></div>`,foot:nextBtn("tolerance")}),
+ tolerance:()=>shell({back:true,title:R.editing?"Shopping":"Step 5 of 5",body:`${R.editing?"":dots(5)}<h1>How many extra ingredients to improve your meal can I suggest?</h1><p class="sub">You can change this any time.</p>
+  ${[["strict","🎯 Strict","Only what I already have."],["flexible","⚖️ Flexible","Up to 2 extras that really help."],["open","🛒 Open","Whatever makes it best."]].map(([k,t,d])=>`<button class="opt ${S.settings.shopping_tolerance===k?"on":""}" data-act="tol" data-v="${k}"><div class="lab"><span>${t}</span></div><div class="prev">${d}</div></button>`).join("")}`,
+  foot:R.editing?`<button class="btn" data-act="saveEdit">Save</button>`:`<button class="btn" data-act="finishOnb">Finish setup</button>`}),
+ home:()=>{const ls=S.last_session,cont=ls&&!ls.finished&&S.current_recipe;
+  return shell({head:false,body:`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><div class="big" style="font-size:30px">Hi there 👋</div><button class="icon-btn" data-act="prefs" aria-label="Preferences">⚙️</button></div>
+  <p class="sub">What are we cooking tonight?</p>
+  ${S.feedback_pending?`<button class="banner" data-act="openFeedback"><span style="font-size:28px">💭</span><div><b>Reflect on last night's ${e(S.last_recipe_title)}?</b><span>Tap to share how it went — takes 10 seconds.</span></div></button>`:""}
+  ${cont?`<button class="banner" style="background:var(--brand-l);border-color:#c9dccf" data-act="resume"><span style="font-size:28px">▶️</span><div><b>Continue ${e(ls.title)}</b><span style="color:var(--brand-d)">Step ${ls.last_step_index+1} of ${S.current_recipe.steps.length}</span></div></button>`:""}
+  <div style="margin-top:26px"><button class="btn" style="min-height:76px;font-size:19px" data-act="go" data-to="ingredients">🍳 Cook with ingredients</button>
+  <button class="btn sec" data-act="go" data-to="history">🕑 History</button></div>
+  <div class="center" style="margin-top:30px"><button class="link" data-act="reopen">↻ Simulate app re-open</button><button class="link" data-act="reset">Reset demo data</button></div>`})},
+ prefs:()=>shell({back:true,title:"Preferences",body:`<h1>Preferences</h1><p class="sub">Change anything, any time.</p>
+  ${[["skill","🎓 Skill level",cap(S.settings.skill_level)],["diet","🥗 Dietary rules",S.settings.dietary_rules.join(", ")||"None"],["equip","🔧 Equipment",S.settings.equipment.length+" items"],["pantry","🧂 Pantry",S.settings.pantry_items.length+" items"],["tolerance","🛒 Shopping",cap(S.settings.shopping_tolerance)]].map(([k,t,v])=>`<button class="row" data-act="edit" data-to="${k}"><div><b>${t}</b><div style="color:var(--muted);font-size:14px">${e(v)}</div></div><span>›</span></button>`).join("")}`}),
+ ingredients:()=>shell({back:true,title:"What's cooking",body:`<h1>What have you got?</h1><p class="sub">Add the main ingredients you want to use up.</p>
+  <form class="field" id="ingForm" autocomplete="off"><input id="ingIn" placeholder="e.g. tomatoes" enterkeyhint="done"><button class="btn" type="submit">Add</button></form>
+  <div id="ingDyn"></div>
+  <h2>Time available</h2><div class="center"><span class="big" id="timeVal">${R.time}</span> <span style="color:var(--muted)">minutes</span></div>
+  <input type="range" id="timeRange" min="10" max="90" step="5" value="${R.time}">
+  <h2>Cuisine (optional)</h2><select class="sel" id="cuisineSel">${CUISINES.map(c=>`<option ${R.cuisine===c?"selected":""}>${c}</option>`).join("")}</select>`,
+  foot:`<button class="btn" id="genBtn" data-act="generate" ${R.ings.length?"":"disabled"}>✨ Find recipes</button>`}),
+ suggest:()=>shell({back:true,title:"3 ideas for you",body:`<h1>Here's what I'd cook</h1><p class="sub">${R.time} min · ${R.cuisine==="Any"?"any cuisine":R.cuisine}${S.settings.dietary_rules.length?" · "+e(S.settings.dietary_rules.join(", ")):""}</p>
+  ${R.briefs.map((b,i)=>`<div class="card rc"><h3>${e(b.title)}</h3><div class="meta"><span class="chip sm static">⏱ ${b.time} min</span><span class="chip sm static">🌍 ${e(b.cuisine)}</span></div>
+   <p style="margin:0 0 12px;color:#3a463f;font-size:14.5px">✅ Uses <b>${usesCount(b)}</b> of your ingredients<br>🛒 <b>${extrasFor(b).length}</b> extra${extrasFor(b).length===1?"":"s"} ${extrasFor(b).length?"(optional)":""}</p>
+   <button class="btn" data-act="pick" data-i="${i}">Cook this</button></div>`).join("")}`,
+  foot:`<button class="btn sec" data-act="refresh">🔄 Suggest 3 new recipes</button>`}),
+ skeleton:()=>"",
+ confirm:()=>{const b=R.brief,c=R.conf;
+  const sec=(title,key,arr,hint)=>`<h2>${title}</h2>${arr.length?arr.map((n,i)=>`<button class="chk ${c[key][n]?"on":""}" data-act="conf" data-k="${key}" data-n="${e(n)}"><span class="bx">${c[key][n]?"✓":""}</span><span class="nm">${e(n)}</span></button>`).join(""):`<p class="sub">${hint}</p>`}`;
+  return shell({back:true,title:"Confirm ingredients",body:`<h1>${e(b.title)}</h1><p class="sub">Untick anything you don't actually have.</p>
+  ${sec("You have","have",R.ings,"")}${sec("Assumed pantry","pantry",b.pantry,"")}${sec("Optional extras","extras",extrasFor(b),"No extras — you chose “strict” shopping.")}`,
+  foot:`<button class="btn" data-act="genFinal">✨ Generate final recipe</button>`})},
+ overview:()=>{const r=R.recipe;
+  return shell({back:true,title:"Recipe",body:`<h1>${e(r.title)}</h1><div class="meta chips" style="margin-bottom:6px"><span class="chip sm static">⏱ ${r.time} min</span><span class="chip sm static">🌍 ${e(r.cuisine)}</span><span class="chip sm static">👣 ${r.steps.length} steps</span><span class="chip sm static">🍽 Serves ${r.servings}</span></div>
+  <h2>Ingredients</h2><div class="card">${r.ingredients.map(i=>`<div style="padding:5px 0">• ${e(i.name)} ${i.type==="extra"?'<span class="pill">extra</span>':""}</div>`).join("")}</div>
+  ${r.missing&&r.missing.length?`<div class="note">Not on hand: ${e(r.missing.join(", "))} — I've adjusted the steps with simple swaps.</div>`:""}
+  <h2>Steps at a glance</h2><ol class="steps">${r.steps.map(s=>`<li>${e(s.title)}</li>`).join("")}</ol>`,
+  foot:`<button class="btn" data-act="startCook">▶ Start Cook Mode</button>`})},
+ cook:()=>{const r=R.recipe,s=r.steps[R.step],n=r.steps.length,txt=s[S.settings.skill_level]||s.standard;
+  return `<section class="scr"><header class="top" style="min-height:52px"><button class="icon-btn" data-act="exitCook" aria-label="Exit">✕</button><div class="ttl">${e(r.title)}</div><div style="width:44px"></div></header>
+  <div class="prog">${r.steps.map((_,i)=>`<i class="${i<R.step?"done":i===R.step?"cur":""}"></i>`).join("")}</div>
+  <div class="cookbody ${R.dir}" id="cookbody"><div class="stepno">Step ${R.step+1} of ${n}</div>
+   <div class="heat">🔥 ${e(s.heat_level)} heat</div><div class="steptitle">${e(s.title)}</div>
+   <div class="steptext ${txt.length>180?"small":""}">${e(txt)}</div>
+   <details><summary>✅ How to know it's right</summary><ul>${s.success_cues.map(c=>`<li>${e(c)}</li>`).join("")}</ul></details>
+   <details><summary>⚠️ If it goes wrong</summary><ul>${s.failure_modes.map(f=>`<li><b>${e(f.issue)}:</b> ${e(f.fix)}</li>`).join("")}</ul></details>
+   <p class="center" style="color:var(--muted);font-size:12px;margin-top:16px">← swipe to change step →</p></div>
+  <nav class="bar"><button data-act="prev" ${R.step===0?"disabled":""}><span>◀</span>Back</button>
+   <button class="nx" data-act="next"><span>${R.step===n-1?"🏁":"▶"}</span>${R.step===n-1?"Finish":"Next"}</button>
+   <button data-act="timer"><span>⏱</span>Timer</button><button data-act="ask"><span>💬</span>Ask</button><button data-act="fix"><span>🛟</span>Fix</button></nav></section>`},
+ finish:()=>shell({head:false,body:`<div class="hero" style="margin-top:70px">🍽️</div><h1 class="center" style="font-size:34px">Dinner is ready.</h1><p class="sub center">Nicely done — ${e(R.recipe.title)} is on the table. Enjoy it while it's hot.</p>`,foot:`<button class="btn" data-act="done">Done</button>`}),
+ feedback:()=>shell({back:true,title:"Feedback",body:`<h1>How did ${e(S.last_recipe_title||"it")} turn out?</h1><p class="sub">One tap is plenty.</p>
+  ${Object.entries(OUT).map(([k,[l,em]])=>`<button class="fbopt ${R.fbPick===k?"on":""}" data-act="fbPick" data-v="${k}"><span class="e">${em}</span>${l}</button>`).join("")}
+  <h2>Anything to add? (optional)</h2><div class="chips">${FB_CHIPS.map(c=>`<button class="chip ${R.fbChips.includes(c)?"on":""}" data-act="fbChip" data-v="${c}">${c}</button>`).join("")}</div>`,
+  foot:`<button class="btn" data-act="fbSubmit" ${R.fbPick?"":"disabled"}>Submit</button>`}),
+ history:()=>shell({back:true,title:"History",body:`<h1>History</h1>${S.history.length?"":`<p class="sub">Nothing cooked yet. Your finished recipes will show up here.</p>`}
+  ${S.history.map((h,i)=>`<button class="hist" data-act="histOpen" data-i="${i}"><span style="font-size:28px">🍲</span><div style="flex:1"><b>${e(h.title)}</b><div style="color:var(--muted);font-size:13px">${dateLabel(h.date)}</div></div>${h.outcome?`<span class="pill ${OUT[h.outcome][2]}">${OUT[h.outcome][0]}</span>`:`<span class="pill">No rating</span>`}</button>`).join("")}`}),
+ past:()=>{const h=S.history[R.params.i],r=h.recipe;
+  return shell({back:true,title:"Past recipe",body:`<h1>${e(h.title)}</h1><p class="sub">Cooked ${dateLabel(h.date)} ${h.outcome?`· <span class="pill ${OUT[h.outcome][2]}">${OUT[h.outcome][0]}</span>`:""}</p>
+  ${h.chips&&h.chips.length?`<div class="chips" style="margin-bottom:8px">${h.chips.map(c=>`<span class="chip sm static">${e(c)}</span>`).join("")}</div>`:""}
+  <h2>Ingredients</h2><div class="card">${r.ingredients.map(i=>`<div style="padding:4px 0">• ${e(i.name)}</div>`).join("")}</div>
+  <h2>Steps</h2><ol class="steps">${r.steps.map(s=>`<li><b>${e(s.title)}</b><br><span style="color:#3a463f;font-size:14.5px">${e(s.standard)}</span></li>`).join("")}</ol>`,
+  foot:`<button class="btn" data-act="cookAgain" data-i="${R.params.i}">🔁 Cook again</button>`})}
+};
+
+/* dynamic fragments + post-render hooks */
+function drawPantry(){const q=R.pantryQ.trim().toLowerCase(),P=S.settings.pantry_items;
+  const quick=STAPLES.filter(s=>!P.includes(s)&&(!q||s.includes(q)));
+  const exact=q&&[...P,...STAPLES].some(x=>x===q);
+  $("#pantryDyn").innerHTML=`<h2>Your pantry (${P.length})</h2><div class="chips">${P.filter(p=>!q||p.includes(q)).map(p=>`<button class="chip on" data-act="pantryRm" data-v="${e(p)}">${e(p)} ✕</button>`).join("")||'<span class="sub">Nothing matches.</span>'}</div>
+  <h2>Quick add</h2><div class="chips">${q&&!exact?`<button class="chip add" data-act="pantryAdd" data-v="${e(q)}">＋ Add “${e(q)}”</button>`:""}${quick.map(s=>`<button class="chip add" data-act="pantryAdd" data-v="${e(s)}">＋ ${e(s)}</button>`).join("")}</div>`}
+function drawIngs(){$("#ingDyn").innerHTML=`<div class="chips">${R.ings.map((n,i)=>`<button class="chip on" data-act="ingRm" data-i="${i}">${e(n)} ✕</button>`).join("")}</div>
+  <h2 style="margin-top:14px">Quick add</h2><div class="chips">${ING_QUICK.filter(x=>!R.ings.includes(x)).map(x=>`<button class="chip add sm" data-act="ingAdd" data-v="${x}">＋ ${x}</button>`).join("")}</div>`;
+  const g=$("#genBtn");if(g)g.disabled=!R.ings.length}
+const AFTER={
+ splash:()=>{setTimeout(()=>{if(R.screen!=="splash")return;go(S.settings.onboarded?"home":"welcome",{},{reset:true})},1100)},
+ pantry:()=>{R.pantryQ="";drawPantry();$("#pantryForm").onsubmit=ev=>{ev.preventDefault();const v=$("#pantryIn").value.trim().toLowerCase();if(v){addPantry(v);$("#pantryIn").value="";R.pantryQ="";drawPantry()}};
+  $("#pantryIn").oninput=ev=>{R.pantryQ=ev.target.value;drawPantry()}},
+ ingredients:()=>{drawIngs();$("#ingForm").onsubmit=ev=>{ev.preventDefault();const v=$("#ingIn").value.trim().toLowerCase();if(v){addIng(v);$("#ingIn").value=""}};
+  $("#timeRange").oninput=ev=>{R.time=+ev.target.value;$("#timeVal").textContent=R.time};$("#cuisineSel").onchange=ev=>{R.cuisine=ev.target.value}},
+ home:()=>{if(S.feedback_pending)R.homeToast=setTimeout(()=>{if(R.screen==="home"&&S.feedback_pending)showToast({icon:"🍳",app:"Sous · now",text:`How did ${e(S.last_recipe_title)} turn out?`,act:"openFeedback",ms:7000})},10000)},
+ cook:()=>{}
+};
+const addPantry=v=>{if(!S.settings.pantry_items.includes(v)){S.settings.pantry_items.push(v);save()}};
+const addIng=v=>{if(!R.ings.includes(v)){R.ings.push(v);drawIngs()}};
+
+/* ============================== COOK MODE ============================== */
+const curStep=()=>R.recipe.steps[R.step];
+function setStep(i,dir){const n=R.recipe.steps.length;if(i<0||i>=n)return;R.step=i;R.dir=dir;
+  if(S.last_session){S.last_session.last_step_index=i;save()}closeSheet();render()}
+function nextStep(){if(R.step>=R.recipe.steps.length-1){go("finish",{},{replace:true});return}setStep(R.step+1,"fwd")}
+function prevStep(){setStep(R.step-1,"bwd")}
+// swipe navigation
+let sx=null,sy=null;
+const appEl=$("#app");
+appEl.addEventListener("pointerdown",ev=>{if(R.screen==="cook"){sx=ev.clientX;sy=ev.clientY}});
+appEl.addEventListener("pointerup",ev=>{if(R.screen!=="cook"||sx===null)return;const dx=ev.clientX-sx,dy=ev.clientY-sy;sx=null;
+  if(Math.abs(dx)>60&&Math.abs(dy)<70){dx<0?nextStep():prevStep()}});
+appEl.addEventListener("pointercancel",()=>{sx=null});
+document.addEventListener("keydown",ev=>{if(R.screen!=="cook"||ev.target.tagName==="INPUT")return;if(ev.key==="ArrowRight")nextStep();if(ev.key==="ArrowLeft")prevStep()});
+
+/* ---- bottom sheet ---- */
+function openSheet(kind){R.sheet={kind,ans:null};drawSheet();const s=$("#sheet");s.classList.remove("mini");requestAnimationFrame(()=>{s.classList.add("open");$("#scrim").classList.add("on")})}
+function closeSheet(instant){clearTimeout(R.miniTimer);R.sheet=null;const s=$("#sheet");if(!s)return;s.classList.remove("open","mini");$("#scrim").classList.remove("on");if(instant)s.innerHTML=""}
+function minimizeSheet(){const s=$("#sheet");if(!R.sheet||!R.sheet.ans)return;s.classList.add("mini");$("#scrim").classList.remove("on")}
+function armMini(){clearTimeout(R.miniTimer);R.miniTimer=setTimeout(()=>{if(R.sheet&&!R.sheet.expanded)minimizeSheet()},6000)}
+function ansBlock(){const a=R.sheet.ans;if(!a)return"";
+  return `<div class="ans"><small>${R.sheet.kind==="ask"?"Sous":"Quick fix"}</small>${e(a.text)}${a.long?(R.sheet.expanded?`<div class="long">${e(a.long)}</div>`:`<div><button class="more" data-act="more">More detail</button></div>`):""}</div>`}
+function drawSheet(){const sh=R.sheet,s=curStep();let h=`<div class="grab"></div>`;
+  if(sh.kind==="ask"){h+=ansBlock()+`<div class="sheethead">Ask about this step</div><div class="sheetsub">${e(s.title)}</div>
+   <form class="field" id="askForm" autocomplete="off"><input id="askIn" placeholder="e.g. Is it done?" enterkeyhint="send"><button class="btn" type="submit">Ask</button></form>
+   <div class="chips">${["Is it ready?","How hot should it be?","Can I swap an ingredient?","How long?"].map(q=>`<button class="chip sm" data-act="askQ" data-q="${e(q)}">${q}</button>`).join("")}</div>`}
+  if(sh.kind==="fix"){h+=ansBlock()+`<div class="sheethead">What's wrong?</div><div class="sheetsub">While on: ${e(s.title)}</div>
+   <div class="chips">${Object.keys(FIX_RESP).map(k=>`<button class="chip ${sh.pick===k?"on":""}" data-act="fixPick" data-v="${k}">${k}</button>`).join("")}</div>`}
+  if(sh.kind==="timer"){const step=s.timers||[];
+   h+=`<div class="sheethead">Timer</div>${R.timers.length?`<div style="margin:8px 0">${R.timers.map(t=>`<div class="row" style="min-height:48px;padding:8px 14px"><span>⏱ ${e(t.label)} · <b id="tl${t.id}">${fmt((t.end-Date.now())/1000)}</b></span><button class="chip sm" data-act="tcancel" data-id="${t.id}">Cancel</button></div>`).join("")}</div>`:`<div class="sheetsub">No timers running.</div>`}
+   ${step.length?`<div class="sheetsub" style="margin-top:6px">Suggested for this step</div>${step.map(t=>`<button class="btn sec" style="min-height:52px;margin-top:6px" data-act="tstart" data-sec="${t.seconds}" data-label="${e(t.label)}">▶ ${e(t.label)} · ${fmt(t.seconds)}</button>`).join("")}`:""}
+   <div class="sheetsub" style="margin-top:14px">Custom</div><div class="chips">${[1,3,5,10].map(m=>`<button class="chip" data-act="tstart" data-sec="${m*60}" data-label="${m} min">${m} min</button>`).join("")}<button class="chip add" data-act="tstart" data-sec="10" data-label="Demo 10s">⚡ 10 sec (demo)</button></div>`}
+  $("#sheet").innerHTML=h;
+  const f=$("#askForm");if(f){f.onsubmit=ev=>{ev.preventDefault();askQ($("#askIn").value)};$("#askIn").onfocus=()=>{R.sheet.expanded=true;clearTimeout(R.miniTimer)}}}
+function setAnswer(a){R.sheet.ans=a;R.sheet.expanded=false;const s=$("#sheet");s.classList.remove("mini");s.scrollTop=0;drawSheet();$("#scrim").classList.add("on");armMini()}
+// mock ask: rule-based and step-aware, max 2 sentences
+function askQ(q){q=(q||"").trim();if(!q)return;const s=curStep(),l=q.toLowerCase();let text,long;
+  const cues=s.success_cues;
+  if(/ready|done|finished|cooked/.test(l)){text=`You'll know it's ready when ${cues[0].charAt(0).toLowerCase()+cues[0].slice(1)}.${cues[1]?` Also check that ${cues[1].charAt(0).toLowerCase()+cues[1].slice(1)}.`:""}`;
+    long=`Full check for “${s.title}”: ${cues.join("; ")}. If something looks off: ${s.failure_modes[0].issue.toLowerCase()} — ${s.failure_modes[0].fix}`}
+  else if(/hot|heat|temperature|flame|burner/.test(l)){text=`For this step use ${s.heat_level.toLowerCase()} heat. If things start browning too fast, lower it a notch.`;long=`${s.standard} Heat is the most common thing to get wrong, so adjust in small steps and give it 30 seconds to respond.`}
+  else if(/how long|time|minutes/.test(l)){const t=s.timers[0];text=t?`This step takes about ${fmt(t.seconds)} — tap Timer to start it.`:`This one is quick, usually under a minute — go by the look and smell rather than the clock.`;long=`Signs it's finished: ${cues.join("; ")}.`}
+  else if(/swap|substitut|instead|replace|without|don't have/.test(l)){text=`You can usually swap like for like here, such as lemon for vinegar or butter for oil. Keep the quantities similar and taste as you go.`;long=`For “${s.title}”, keep the same cooking method and heat (${s.heat_level.toLowerCase()}). A different ingredient may cook faster or slower, so rely on the cues: ${cues[0].toLowerCase()}.`}
+  else{text=`For “${s.title}”: ${s.short} Keep the heat ${s.heat_level.toLowerCase()}.`.replace(/\.\s*\./g,".");long=`${s.standard} ${s.failure_modes[0].issue}? ${s.failure_modes[0].fix}`}
+  setAnswer({text,long})}
+function fixPick(issue){const s=curStep(),r=FIX_RESP[issue];R.sheet.pick=issue;
+  const hit=s.failure_modes.find(f=>f.issue.toLowerCase().includes(r.key));
+  const first=r.text.split(/(?<=\.)\s/)[0];
+  const text=hit?`${hit.fix} ${first}`:r.text;
+  setAnswer({text,long:`You're on “${s.title}” (${s.heat_level.toLowerCase()} heat). After the fix, taste again before moving on — small adjustments beat big ones.`})}
+
+/* ---- timers ---- */
+let tid=1;
+function startTimer(sec,label){const t={id:tid++,label,end:Date.now()+sec*1000};R.timers.push(t);closeSheet();renderTimers();showToast({icon:"⏱",app:"Timer",text:`${label} started · ${fmt(sec)}`,ms:2200})}
+function renderTimers(){$("#timers").innerHTML=R.timers.map(t=>`<button class="tchip" data-act="timer">⏱ ${fmt((t.end-Date.now())/1000)} · ${e(t.label)}</button>`).join("")}
+function beep(){try{const c=new (window.AudioContext||window.webkitAudioContext)();[0,.25,.5].forEach(d=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=880;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(.15,c.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d+.2);o.start(c.currentTime+d);o.stop(c.currentTime+d+.22)})}catch(x){}try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(x){}}
+setInterval(()=>{if(!R.timers.length)return;const now=Date.now();
+  R.timers.filter(t=>t.end<=now).forEach(t=>{R.timers=R.timers.filter(x=>x!==t);beep();showToast({icon:"⏰",app:"Timer done",text:`${t.label} is done!`,ms:6000});if(R.sheet&&R.sheet.kind==="timer")drawSheet()});
+  renderTimers();R.timers.forEach(t=>{const el=$("#tl"+t.id);if(el)el.textContent=fmt((t.end-now)/1000)})},500);
+
+/* ---- toast ---- */
+function showToast(o){const t=$("#toast");clearTimeout(R.toastTimer);
+  t.innerHTML=`<button class="toast" ${o.act?`data-act="${o.act}"`:""}><span class="ti">${o.icon}</span><div><small>${e(o.app||"Sous")}</small>${o.text}</div></button>`;
+  t.classList.add("on");R.toastTimer=setTimeout(()=>t.classList.remove("on"),o.ms||4000)}
+const hideToast=()=>{$("#toast").classList.remove("on")};
+
+/* ============================== ACTIONS ============================== */
+function buildRecipe(b,c){const base=JSON.parse(JSON.stringify(RECIPES[b.base]));const ing=[];
+  R.ings.forEach(n=>c.have[n]&&ing.push({name:n,type:"have"}));b.pantry.forEach(n=>c.pantry[n]&&ing.push({name:n,type:"pantry"}));extrasFor(b).forEach(n=>c.extras[n]&&ing.push({name:n,type:"extra"}));
+  return {id:b.id,title:b.title,cuisine:b.cuisine,time:b.time,servings:base.servings,ingredients:ing,missing:b.pantry.filter(n=>!c.pantry[n]).concat(R.ings.filter(n=>!c.have[n])),steps:base.steps}}
+function startSession(){S.last_session={recipe_id:R.recipe.id,title:R.recipe.title,date:new Date().toISOString(),outcome:null,last_step_index:0,finished:false};S.current_recipe=R.recipe;save()}
+function resetToHome(){go("home",{},{reset:true})}
+const A={
+ back,
+ go:d=>{go(d.to)},
+ onb:d=>{R.editing=false;go(d.to)},
+ skill:d=>{S.settings.skill_level=d.v;save();render()},
+ diet:d=>{toggle(S.settings.dietary_rules,d.v);save();render()},
+ equip:d=>{toggle(S.settings.equipment,d.v);save();render()},
+ tol:d=>{S.settings.shopping_tolerance=d.v;save();render()},
+ pantryRm:d=>{S.settings.pantry_items=S.settings.pantry_items.filter(x=>x!==d.v);save();drawPantry()},
+ pantryAdd:d=>{addPantry(d.v);save();drawPantry()},
+ finishOnb:()=>{S.settings.onboarded=true;save();R.stack=[];go("home",{},{reset:true})},
+ prefs:()=>go("prefs"),
+ edit:d=>{R.editing=true;go(d.to)},
+ saveEdit:()=>{R.editing=false;save();back()},
+ reset:()=>{localStorage.removeItem(KEY);load();R.stack=[];R.ings=[];R.timers=[];R.editing=false;go("splash",{},{reset:true})},
+ reopen:()=>{R.stack=[];go("splash",{},{reset:true})},
+ ingAdd:d=>{addIng(d.v)},
+ ingRm:d=>{R.ings.splice(+d.i,1);drawIngs()},
+ generate:()=>{R.round=0;loading("Finding recipes for you…",1100,()=>{R.briefs=SETS[0];go("suggest")})},
+ refresh:()=>{R.round++;$(".body").innerHTML=`<h1>Thinking of new ideas…</h1><p class="sub">Fresh options coming up.</p><div class="skel"></div><div class="skel"></div><div class="skel"></div>`;
+  setTimeout(()=>{if(R.screen!=="suggest")return;R.briefs=SETS[R.round%2];render()},900)},
+ pick:d=>{const b=R.briefs[+d.i];R.brief=b;const c={have:{},pantry:{},extras:{}};R.ings.forEach(n=>c.have[n]=true);b.pantry.forEach(n=>c.pantry[n]=true);extrasFor(b).forEach(n=>c.extras[n]=S.settings.shopping_tolerance==="open");R.conf=c;go("confirm")},
+ conf:d=>{R.conf[d.k][d.n]=!R.conf[d.k][d.n];const top=$(".body").scrollTop;render();$(".body").scrollTop=top},
+ genFinal:()=>{loading("Writing your recipe…",1300,()=>{R.recipe=buildRecipe(R.brief,R.conf);go("overview")})},
+ startCook:()=>{R.step=0;R.dir="fwd";startSession();go("cook",{},{replace:false})},
+ resume:()=>{R.recipe=S.current_recipe;R.step=S.last_session.last_step_index||0;R.dir="fwd";go("cook")},
+ exitCook:()=>{closeSheet(true);resetToHome()},
+ next:nextStep,prev:prevStep,
+ ask:()=>openSheet("ask"),fix:()=>openSheet("fix"),timer:()=>{if(R.screen==="cook")openSheet("timer")},
+ closeSheet:()=>closeSheet(),
+ more:()=>{R.sheet.expanded=true;clearTimeout(R.miniTimer);drawSheet()},
+ askQ:d=>{$("#askIn")&&($("#askIn").value=d.q);askQ(d.q)},
+ fixPick:d=>fixPick(d.v),
+ tstart:d=>startTimer(+d.sec,d.label),
+ tcancel:d=>{R.timers=R.timers.filter(t=>t.id!==+d.id);renderTimers();drawSheet()},
+ done:()=>{const r=R.recipe;S.history.unshift({id:Date.now(),recipe_id:r.id,title:r.title,date:new Date().toISOString(),outcome:null,chips:[],recipe:r});
+  S.last_session.finished=true;S.last_session.last_step_index=r.steps.length-1;S.feedback_pending=true;S.last_recipe_title=r.title;S.current_recipe=null;save();R.timers=[];resetToHome()},
+ openFeedback:()=>{hideToast();R.fbPick=null;R.fbChips=[];go("feedback")},
+ fbPick:d=>{R.fbPick=d.v;render()},
+ fbChip:d=>{toggle(R.fbChips,d.v);render()},
+ fbSubmit:()=>{const h=S.history.find(x=>!x.outcome)||S.history[0];if(h){h.outcome=R.fbPick;h.chips=R.fbChips.slice()}
+  if(S.last_session)S.last_session.outcome=R.fbPick;S.feedback_pending=false;save();resetToHome();showToast({icon:"✅",app:"Saved",text:"Thanks! Added to your History.",ms:2800})},
+ histOpen:d=>go("past",{i:+d.i}),
+ cookAgain:d=>{const h=S.history[+d.i];R.recipe=JSON.parse(JSON.stringify(h.recipe));go("overview")}
+};
+document.addEventListener("click",ev=>{
+  const sheet=$("#sheet");
+  if(sheet.classList.contains("mini")&&sheet.contains(ev.target)){sheet.classList.remove("mini");R.sheet&&(R.sheet.expanded=true);$("#scrim").classList.add("on");clearTimeout(R.miniTimer);return}
+  const t=ev.target.closest("[data-act]");if(!t)return;const f=A[t.dataset.act];if(f)f(t.dataset,ev)});
+
+/* ============================== BOOT ============================== */
+render();
+</script>
+</body>
+</html>
