@@ -92,8 +92,10 @@ $('go').onclick=async()=>{
   const fd=new FormData();fd.append('track',trackFile);
   if(tab==='file')fd.append('reference',refFile);else fd.append('spotify_link',$('link').value.trim());
   try{
-    const r=await fetch('/api/master',{method:'POST',body:fd});const j=await r.json();
-    if(!r.ok)throw new Error(j.detail||'Mastering failed');show(j);
+    const r=await fetch('/api/master',{method:'POST',body:fd});const raw=await r.text();let j=null;
+    try{j=JSON.parse(raw)}catch(_){}
+    if(!r.ok||!j)throw new Error(j&&j.detail?j.detail:'The server failed to process this track (it may have run out of memory or timed out). Try a shorter track or an MP3.');
+    show(j);
   }catch(e){$('err').textContent=e.message}
   $('go').textContent='Master it';update();
 };

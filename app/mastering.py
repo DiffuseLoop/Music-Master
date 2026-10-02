@@ -31,8 +31,11 @@ class Report:
         return asdict(self)
 
 
-def load_audio(path, sr=None):
+def load_audio(path, sr=None, max_seconds=None):
     """Load as float32 (samples, channels); optionally resample to `sr`."""
+    info = sf.info(path)
+    if max_seconds and info.duration > max_seconds:
+        raise ValueError(f"Track is {info.duration / 60:.1f} min long; the limit is {max_seconds / 60:.0f} min.")
     data, file_sr = sf.read(path, dtype="float32", always_2d=True)
     if data.shape[0] < file_sr // 2:
         raise ValueError("Audio is too short (need at least 0.5 s).")
@@ -46,7 +49,32 @@ def load_audio(path, sr=None):
 
 
 def _lufs(x, sr):
-    return float(pyln.Meter(sr).integrated_loudness(x))
+    """Integrated loudness (BS.1770-4), computed channel by channel to keep memory low."""
+    meter = pyln.Meter(sr)
+    step = int(round(0.1 * sr))             # 100 ms hop; a 400 ms gating block = 4 hops
+    n_steps = x.shape[0] // step
+    if n_steps < 4:
+        return float(meter.integrated_loudness(x))
+    energy = np.zeros(n_steps)
+    for ch in range(x.shape[1]):
+        y = x[:, ch].astype("float64")
+        for name in ("high_shelf", "high_pass"):
+            f = meter._filters[name]
+            y = signal.lfilter(f.b, f.a, y)
+        for i in range(0, n_steps, 1024):
+            j = min(i + 1024, n_steps)
+            energy[i:j] += (y[i * step:j * step].reshape(j - i, step) ** 2).mean(axis=1)
+        del y
+    z = np.convolve(energy, np.ones(4) / 4, mode="valid")  # per-block mean square, summed over channels
+    loud = -0.691 + 10 * np.log10(z + 1e-20)
+    keep = loud > -70
+    if not keep.any():
+        return -70.0
+    rel = -0.691 + 10 * np.log10(z[keep].mean()) - 10
+    keep &= loud > rel
+    if not keep.any():
+        return -70.0
+    return float(-0.691 + 10 * np.log10(z[keep].mean()))
 
 
 def _peak_db(x):
@@ -55,9 +83,16 @@ def _peak_db(x):
 
 def _avg_spectrum(x, sr):
     """Long-term average power spectrum (dB) of the mono sum, ignoring silence."""
-    mono = x.mean(axis=1)
-    freqs, psd = signal.welch(mono, sr, nperseg=FFT, noverlap=FFT * 3 // 4)
-    return freqs, 10 * np.log10(psd + 1e-14)
+    chunk = sr * 20                       # average PSDs of 20 s pieces to bound memory
+    total, weight = 0.0, 0
+    for i in range(0, x.shape[0], chunk):
+        mono = x[i:i + chunk].mean(axis=1, dtype="float64")
+        if len(mono) < FFT:
+            continue
+        freqs, psd = signal.welch(mono, sr, nperseg=FFT, noverlap=FFT * 3 // 4)
+        total = total + psd * len(mono)
+        weight += len(mono)
+    return freqs, 10 * np.log10(total / weight + 1e-14)
 
 
 def _smooth_octave(freqs, db, fraction=3):
@@ -95,14 +130,24 @@ def _apply_eq(audio, freqs, gain_db, sr, taps=4095):
     f = freqs / nyq
     g = 10 ** (gain_db / 20)
     fir = signal.firwin2(taps, f, g, window="hann")
-    out = signal.fftconvolve(audio, fir[:, None], mode="same", axes=0)
-    return out.astype("float32")
+    half = taps // 2
+    n = audio.shape[0]
+    out = np.zeros_like(audio)
+    block = 1 << 18                       # overlap-add in blocks to bound memory
+    for ch in range(audio.shape[1]):
+        for i in range(0, n, block):
+            seg = signal.fftconvolve(audio[i:i + block, ch].astype("float64"), fir)
+            lo, hi = i - half, i - half + len(seg)        # position in output of seg[0] / end
+            a, b = max(lo, 0), min(hi, n)
+            out[a:b, ch] += seg[a - lo:b - lo]
+    return out
 
 
 def _width(x):
     """Side/mid RMS ratio of a stereo signal."""
-    m, s = (x[:, 0] + x[:, 1]) / 2, (x[:, 0] - x[:, 1]) / 2
-    return float(np.sqrt((s ** 2).mean()) / (np.sqrt((m ** 2).mean()) + 1e-9))
+    m = (x[:, 0] + x[:, 1]) / 2
+    sd = (x[:, 0] - x[:, 1]) / 2
+    return float(np.sqrt((sd ** 2).mean(dtype="float64")) / (np.sqrt((m ** 2).mean(dtype="float64")) + 1e-9))
 
 
 def _match_width(audio, ref):
@@ -110,22 +155,31 @@ def _match_width(audio, ref):
         return audio, 1.0
     wa, wr = _width(audio), _width(ref)
     k = float(np.clip(wr / (wa + 1e-9), 0.6, 1.6)) if wa > 1e-4 else 1.0
-    m, s = (audio[:, 0] + audio[:, 1]) / 2, (audio[:, 0] - audio[:, 1]) / 2
-    s = s * k
-    return np.stack([m + s, m - s], axis=1).astype("float32"), k
+    block = 1 << 20                       # in place, block by block
+    for i in range(0, audio.shape[0], block):
+        seg = audio[i:i + block]
+        m = (seg[:, 0] + seg[:, 1]) / 2
+        sd = (seg[:, 0] - seg[:, 1]) / 2 * k
+        seg[:, 0], seg[:, 1] = m + sd, m - sd
+    return audio, k
 
 
-def limit(x, sr, ceiling_db=CEILING_DB, lookahead_ms=6.0):
-    """Look-ahead peak limiter with smooth gain reduction."""
-    ceiling = 10 ** (ceiling_db / 20)
+def limit(x, sr, ceiling_db=CEILING_DB, lookahead_ms=6.0, pre_gain=1.0):
+    """Look-ahead peak limiter with smooth gain reduction. Returns a new float32 array."""
+    ceiling = np.float32(10 ** (ceiling_db / 20))
     n = max(int(sr * lookahead_ms / 1000), 1)
-    peak = np.abs(x).max(axis=1)
-    gain = np.minimum(1.0, ceiling / np.maximum(peak, 1e-9))
+    gain = np.empty(x.shape[0], dtype="float32")
+    for i in range(0, x.shape[0], 1 << 20):
+        gain[i:i + (1 << 20)] = np.abs(x[i:i + (1 << 20)]).max(axis=1)
+    gain *= np.float32(pre_gain)
+    np.maximum(gain, 1e-9, out=gain)
+    np.divide(ceiling, gain, out=gain)
+    np.minimum(gain, 1.0, out=gain)
     gain = minimum_filter1d(gain, 2 * n + 1, mode="nearest")
     gain = uniform_filter1d(gain, n + 1, mode="nearest")  # attack ramp
-    out = gain
-    y = x * out[:, None]
-    return np.clip(y, -ceiling, ceiling).astype("float32")
+    y = x * (gain * np.float32(pre_gain))[:, None]
+    np.clip(y, -ceiling, ceiling, out=y)
+    return y
 
 
 def _match_loudness(audio, sr, target_lufs):
@@ -133,7 +187,7 @@ def _match_loudness(audio, sr, target_lufs):
     y = audio
     gain_db = target_lufs - _lufs(audio, sr)
     for _ in range(4):
-        y = limit(audio * 10 ** (gain_db / 20), sr)
+        y = limit(audio, sr, pre_gain=10 ** (gain_db / 20))
         err = target_lufs - _lufs(y, sr)
         if abs(err) < 0.3:
             break
@@ -141,14 +195,15 @@ def _match_loudness(audio, sr, target_lufs):
     return y
 
 
-def master(target_path, reference_path, output_path):
-    audio, sr = load_audio(target_path)
+def master(target_path, reference_path, output_path, max_seconds=None):
+    audio, sr = load_audio(target_path, max_seconds=max_seconds)
     ref, _ = load_audio(reference_path, sr=sr)
     in_lufs, in_peak = _lufs(audio, sr), _peak_db(audio)
     ref_lufs = _lufs(ref, sr)
 
     freqs, eq, a_s, r_s = _eq_curve(audio, ref, sr)
     y = _apply_eq(audio, freqs, eq, sr)
+    del audio
     y, width_k = _match_width(y, ref)
 
     target = float(np.clip(ref_lufs, *LOUDNESS_RANGE))

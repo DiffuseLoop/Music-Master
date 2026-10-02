@@ -1,3 +1,4 @@
+import os
 import shutil
 import tempfile
 import uuid
@@ -10,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from . import mastering, spotify
 
 MAX_BYTES = 200 * 1024 * 1024
+MAX_SECONDS = float(os.environ.get("MAX_TRACK_MINUTES", "4")) * 60  # memory bound on small hosts
 JOBS = Path(tempfile.gettempdir()) / "music-master-jobs"
 JOBS.mkdir(exist_ok=True)
 STATIC = Path(__file__).parent / "static"
@@ -60,9 +62,9 @@ async def master(track: UploadFile = File(...), reference: UploadFile | None = F
                 raise HTTPException(400, str(e))
             (d / "reference").write_bytes(audio)
         try:
-            report = mastering.master(d / "track", d / "reference", d / "mastered.wav")
+            report = mastering.master(d / "track", d / "reference", d / "mastered.wav", MAX_SECONDS)
         except (RuntimeError, ValueError) as e:
-            raise HTTPException(422, f"Couldn't read audio: {e}. Use WAV, FLAC, MP3 or OGG.")
+            raise HTTPException(422, str(e) if "limit is" in str(e) else f"Couldn't read audio: {e}. Use WAV, FLAC, MP3 or OGG.")
     except Exception:
         shutil.rmtree(d, ignore_errors=True)
         raise
