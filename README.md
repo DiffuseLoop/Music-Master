@@ -22,3 +22,7 @@ Spotify doesn't allow downloading full tracks, so a Spotify reference uses the 3
 To enable in-app search, set `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` (developer.spotify.com). Pasting a link works without credentials.
 
 Supported inputs: WAV, FLAC, MP3, OGG. Output: 24-bit WAV.
+
+## Put it online (use from a phone)
+
+The repo includes `render.yaml`, so it can be deployed on https://render.com as a Blueprint (New → Blueprint → pick this repo and branch). Render gives you a public URL that works on any phone.
