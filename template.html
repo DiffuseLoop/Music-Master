@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pčelinja riječ</title>
+<style>
+:root{
+  --bg:#fff; --fg:#121212; --muted:#6b6b6b; --line:#dcdcdc;
+  --yellow:#f7da21; --yellow-fg:#121212; --gray:#e6e6e6; --gray-fg:#121212;
+  --btn-bg:#fff; --btn-hover:#f0f0f0; --toast-bg:#121212; --toast-fg:#fff;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#1b1b1b; --fg:#f2f2f2; --muted:#a0a0a0; --line:#444;
+    --gray:#3a3a3a; --gray-fg:#f2f2f2; --btn-bg:#1b1b1b; --btn-hover:#2a2a2a;
+    --toast-bg:#f2f2f2; --toast-fg:#121212; }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center}
+header{width:100%;border-bottom:1px solid var(--line);padding:14px 16px;text-align:center}
+header h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:1.6rem;font-weight:700;letter-spacing:.2px}
+main{width:100%;max-width:880px;display:flex;gap:32px;padding:16px;flex-wrap:wrap;justify-content:center}
+.left{flex:1 1 320px;max-width:420px;display:flex;flex-direction:column;align-items:center}
+.right{flex:1 1 320px;max-width:420px}
+
+.rank{display:flex;align-items:center;width:100%;gap:12px;margin-bottom:14px}
+.rank b{min-width:110px;font-size:1rem}
+.bar{position:relative;flex:1;height:2px;background:var(--line);display:flex;justify-content:space-between;align-items:center}
+.bar i{width:10px;height:10px;border-radius:50%;background:var(--line);z-index:1}
+.bar i.on{background:var(--yellow)}
+.bar i.cur{width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  font-style:normal;font-size:.72rem;font-weight:700;color:var(--yellow-fg);border-radius:50%}
+.bar i.cur{background:var(--yellow)}
+
+.input{height:48px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;margin:6px 0 14px;min-height:48px}
+.input .c{color:var(--yellow)}
+.input .bad{color:var(--muted)}
+.input .caret{width:2px;height:2rem;background:var(--yellow);margin-left:2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.input.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+.toast{position:relative;height:0;width:100%}
+.toast span{position:absolute;left:50%;top:-6px;transform:translateX(-50%);background:var(--toast-bg);color:var(--toast-fg);
+  padding:7px 14px;border-radius:6px;font-weight:700;font-size:.95rem;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+.toast span.show{opacity:1}
+
+.hive{position:relative;width:260px;height:270px;margin:6px 0 18px;--r:42px}
+.hex{position:absolute;width:calc(var(--r)*2);height:calc(var(--r)*1.732);
+  left:calc(50% - var(--r));top:calc(50% - var(--r)*.866);
+  clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);
+  background:var(--gray);color:var(--gray-fg);border:0;padding:0;cursor:pointer;
+  font:700 1.7rem "Helvetica Neue",Helvetica,Arial,sans-serif;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:transform .08s;
+  transform:translate(var(--x),var(--y))}
+.hex.center{background:var(--yellow);color:var(--yellow-fg)}
+.hex:active{transform:translate(var(--x),var(--y)) scale(.92)}
+.hex:focus-visible{outline:none;filter:brightness(.9)}
+
+.actions{display:flex;gap:10px;margin-bottom:16px}
+.pill{background:var(--btn-bg);color:var(--fg);border:1px solid var(--line);border-radius:999px;
+  padding:12px 20px;font-size:1rem;cursor:pointer;min-width:84px;font-family:inherit}
+.pill:hover{background:var(--btn-hover)}
+.pill.icon{min-width:52px;padding:12px 0;font-size:1.15rem}
+.pill.new{background:var(--yellow);color:var(--yellow-fg);border-color:var(--yellow);font-weight:700}
+.pill.new:hover{filter:brightness(.95)}
+
+.box{border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.box h2{font-size:1rem;margin:0 0 4px;font-weight:700}
+.meta{color:var(--muted);font-size:.85rem;margin-bottom:8px}
+.words{columns:2;column-gap:24px;list-style:none;margin:0;padding:0;min-height:40px}
+.words li{padding:6px 0;border-bottom:1px solid var(--line);text-transform:lowercase;break-inside:avoid;font-size:1rem}
+.words li.pan{font-weight:700}
+.words li.pan::after{content:" ★";color:#d4a500}
+.words li.miss{color:var(--muted)}
+.empty{color:var(--muted);font-size:.9rem}
+.tools{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.tools .pill{padding:8px 14px;font-size:.85rem;min-width:0}
+footer{color:var(--muted);font-size:.8rem;padding:8px 16px 24px;text-align:center}
+#hint{margin-top:10px;font-size:.9rem;color:var(--muted)}
+@media (max-width:480px){ .right{max-width:none} .hive{--r:40px} }
+</style>
+</head>
+<body>
+<header><h1>Pčelinja riječ</h1></header>
+<main>
+  <section class="left">
+    <div class="rank"><b id="rankName">Početnik</b><div class="bar" id="bar"></div></div>
+    <div class="toast"><span id="toast"></span></div>
+    <div class="input" id="input" aria-live="polite"></div>
+    <div class="hive" id="hive"></div>
+    <div class="actions">
+      <button class="pill" id="del">Obriši</button>
+      <button class="pill icon" id="shuf" title="Promiješaj" aria-label="Promiješaj">⟳</button>
+      <button class="pill" id="enter">Unesi</button>
+    </div>
+    <button class="pill new" id="newGame">Nova zagonetka</button>
+  </section>
+  <section class="right">
+    <div class="box">
+      <h2 id="count">Pronađeno 0 riječi</h2>
+      <div class="meta" id="meta"></div>
+      <ul class="words" id="words"></ul>
+      <div class="empty" id="empty">Sastavi riječi od 4 ili više slova. Svaka riječ mora sadržavati žuto slovo.</div>
+      <div class="tools">
+        <button class="pill" id="hintBtn">Pomoć</button>
+        <button class="pill" id="giveUp">Prikaži rješenja</button>
+      </div>
+      <div id="hint"></div>
+    </div>
+  </section>
+</main>
+<footer>Riječi od 4+ slova · 4 slova = 1 bod, dulje = broj slova · pangram (sva 7 slova) +7 bodova</footer>
+
+<script>
+const WORDS = "/*WORDS*/".split(" ");
+const ALPHA = "abcčćdđefghijklmnoprsštuvzž";
+const IDX = {}; [...ALPHA].forEach((c,i)=>IDX[c]=i);
+const maskOf = w => { let m=0; for(const c of w) m|=1<<IDX[c]; return m; };
+const pop = m => { let n=0; while(m){m&=m-1;n++} return n; };
+const MASKS = WORDS.map(maskOf);
+const WORD_SET = new Set(WORDS);
+const PAN_IDX = []; const seenMasks = new Set();
+MASKS.forEach((m,i)=>{ if(pop(m)===7 && !seenMasks.has(m)){ seenMasks.add(m); PAN_IDX.push(i);} });
+
+const RANKS = [["Početnik",0],["Dobar početak",.02],["Napredak",.05],["Dobro",.08],["Solidno",.15],
+  ["Lijepo",.25],["Sjajno",.4],["Izvrsno",.5],["Genij",.7],["Kraljica pčela",1]];
+const $ = id => document.getElementById(id);
+const score = w => (w.length===4?1:w.length) + (pop(maskOf(w))===7?7:0);
+const rnd = n => Math.floor(Math.random()*n);
+const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]} return a; };
+
+let G; // {center, outer[], answers[], max, found[], gaveUp}
+
+function solve(letters, center){
+  const lm = maskOf(letters.join("")), cb = 1<<IDX[center], res=[];
+  for(let i=0;i<WORDS.length;i++){ const m=MASKS[i]; if((m&~lm)===0 && (m&cb)) res.push(WORDS[i]); }
+  return res;
+}
+function newPuzzle(){
+  for(let t=0;t<400;t++){
+    const w = WORDS[PAN_IDX[rnd(PAN_IDX.length)]];
+    const letters = [...new Set(w)];
+    const center = letters[rnd(7)];
+    const answers = solve(letters, center);
+    if(answers.length<20 || answers.length>60) continue;
+    const max = answers.reduce((s,x)=>s+score(x),0);
+    if(max<45) continue;
+    return {center, outer:shuffle(letters.filter(c=>c!==center)), answers, max, found:[], gaveUp:false};
+  }
+  return newPuzzle();
+}
+function save(){ try{ localStorage.setItem("pcelinja-hr", JSON.stringify(G)); }catch(e){} }
+function load(){ try{ const g=JSON.parse(localStorage.getItem("pcelinja-hr")); if(g&&g.answers&&g.answers.every(w=>WORD_SET.has(w))) return g; }catch(e){} return null; }
+
+let cur = "";
+function buildHive(){
+  const hive=$("hive"); hive.innerHTML="";
+  const r = parseFloat(getComputedStyle(hive).getPropertyValue("--r"));
+  const d = r*1.732+3;
+  const mk = (ch,cls,x,y)=>{
+    const b=document.createElement("button"); b.className="hex "+cls; b.textContent=ch; b.dataset.ch=ch;
+    b.style.setProperty('--x',x+'px'); b.style.setProperty('--y',y+'px'); b.addEventListener("click",()=>type(ch));
+    b.addEventListener("mousedown",e=>e.preventDefault()); hive.appendChild(b);
+  };
+  mk(G.center,"center",0,0);
+  // flat-top hexes: neighbours at 30°, 90°, ... distance d
+  const angs=[-90,-30,30,90,150,210];
+  G.outer.forEach((ch,i)=>{ const a=angs[i]*Math.PI/180; mk(ch,"",Math.cos(a)*d,Math.sin(a)*d); });
+}
+function renderInput(){
+  const el=$("input"); el.innerHTML="";
+  for(const c of cur){
+    const s=document.createElement("span");
+    s.textContent=c;
+    if(c===G.center) s.className="c"; else if(!G.outer.includes(c)) s.className="bad";
+    el.appendChild(s);
+  }
+  const caret=document.createElement("span"); caret.className="caret"; el.appendChild(caret);
+}
+function type(ch){ if(cur.length<24){ cur+=ch; renderInput(); } }
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast.h);
+  toast.h=setTimeout(()=>t.classList.remove("show"),1400); }
+function shake(){ const el=$("input"); el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+
+function submit(){
+  const w=cur; if(!w) return;
+  const lm=maskOf([G.center,...G.outer].join(""));
+  const reject=msg=>{ toast(msg); shake(); setTimeout(()=>{cur="";renderInput()},350); };
+  if(G.gaveUp) return reject("Zagonetka je otkrivena");
+  if(w.length<4) return reject("Prekratko");
+  if([...w].some(c=>!(c in IDX) || !(lm&(1<<IDX[c])))) return reject("Neispravna slova");
+  if(!w.includes(G.center)) return reject("Nedostaje središnje slovo");
+  if(G.found.includes(w)) return reject("Već pronađeno");
+  if(!G.answers.includes(w)) return reject("Nije na popisu riječi");
+  G.found.push(w); save();
+  const pts=score(w);
+  toast(pop(maskOf(w))===7 ? "Pangram! +"+pts : pts>=7?"Sjajno! +"+pts : pts>=5?"Odlično! +"+pts : "Dobro! +"+pts);
+  cur=""; renderInput(); renderState(w);
+}
+function points(){ return G.found.reduce((s,w)=>s+score(w),0); }
+function rankIdx(){ const p=points()/G.max; let k=0; RANKS.forEach((r,i)=>{ if(p>=r[1]) k=i; }); return k; }
+function renderState(justFound){
+  const p=points(), k=rankIdx();
+  $("rankName").textContent=RANKS[k][0];
+  const bar=$("bar"); bar.innerHTML="";
+  RANKS.forEach((r,i)=>{ const d=document.createElement("i");
+    if(i<k) d.className="on"; if(i===k){ d.className="cur"; d.textContent=p; } bar.appendChild(d); });
+  const n=G.found.length;
+  $("count").textContent = G.gaveUp ? `Sve riječi (${G.answers.length})` :
+    `Pronađeno ${n} ${n%10===1&&n%100!==11?"riječ":"riječi"}`;
+  $("meta").textContent=`${p} / ${G.max} bodova · ukupno ${G.answers.length} riječi`;
+  const ul=$("words"); ul.innerHTML="";
+  const list = G.gaveUp ? [...G.answers].sort((a,b)=>a.localeCompare(b,"hr")) : [...G.found].sort((a,b)=>a.localeCompare(b,"hr"));
+  list.forEach(w=>{ const li=document.createElement("li"); li.textContent=w;
+    if(pop(maskOf(w))===7) li.classList.add("pan"); if(G.gaveUp && !G.found.includes(w)) li.classList.add("miss"); ul.appendChild(li); });
+  $("empty").style.display = list.length?"none":"block";
+  if(justFound && k===RANKS.length-1) setTimeout(()=>toast("Kraljica pčela! 👑"),1500);
+}
+function start(g){
+  G=g||newPuzzle(); cur=""; $("hint").textContent=""; save(); buildHive(); renderInput(); renderState();
+}
+function hint(){
+  if(G.gaveUp) return;
+  const left=G.answers.filter(w=>!G.found.includes(w));
+  const pans=G.answers.filter(w=>pop(maskOf(w))===7), pLeft=pans.filter(w=>!G.found.includes(w));
+  const byFirst={}; left.forEach(w=>{ const k=w[0]; byFirst[k]=(byFirst[k]||0)+1; });
+  $("hint").textContent = `Preostalo riječi: ${left.length}. Pangrama: ${pans.length} (preostalo ${pLeft.length}). Počeci: `
+    + Object.entries(byFirst).sort((a,b)=>a[0].localeCompare(b[0],"hr")).map(([k,v])=>k.toUpperCase()+"×"+v).join(", ");
+}
+$("hintBtn").onclick=hint;
+$("giveUp").onclick=()=>{ if(G.gaveUp|| confirm("Prikazati sva rješenja?")){ G.gaveUp=true; save(); renderState(); } };
+$("newGame").onclick=()=>start();
+$("del").onclick=()=>{ cur=cur.slice(0,-1); renderInput(); };
+$("enter").onclick=submit;
+$("shuf").onclick=()=>{ shuffle(G.outer); save(); buildHive(); };
+
+document.addEventListener("keydown",e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  if(e.key==="Enter"){ e.preventDefault(); submit(); }
+  else if(e.key==="Backspace"){ cur=cur.slice(0,-1); renderInput(); }
+  else if(e.key===" "){ e.preventDefault(); shuffle(G.outer); buildHive(); }
+  else if(e.key.length===1){ const c=e.key.toLowerCase(); if(c in IDX) type(c); }
+});
+start(load());
+</script>
+</body>
+</html>
