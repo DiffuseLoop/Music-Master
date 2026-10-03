@@ -38,7 +38,7 @@ a.dl{display:inline-block;margin-top:12px;color:var(--acc)}
     <input type="file" id="track" accept="audio/*" hidden></label></div>
 
 <div class="card"><h2>2 · Reference</h2>
-  <div class="tabs"><button class="on" data-tab="spotify">Spotify</button><button data-tab="file">Upload file</button></div>
+  <div class="tabs"><button class="on" data-tab="spotify">Spotify</button><button data-tab="file">Upload file</button><button data-tab="preset">Preset</button></div>
   <div id="tab-spotify">
     <input type="text" id="link" placeholder="Paste a Spotify track link">
     <div id="searchBox" hidden style="margin-top:10px">
@@ -46,6 +46,8 @@ a.dl{display:inline-block;margin-top:12px;color:var(--acc)}
       <ul class="res" id="results" style="list-style:none;padding:0;margin:6px 0 0"></ul></div>
     <p class="hint">Spotify only shares 30-second previews, so the match is based on that clip. For the most accurate result, upload the full reference file.</p>
   </div>
+  <div id="tab-preset" hidden><select id="preset" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#0f1115;color:var(--fg);font:inherit"></select>
+    <p class="hint">No reference track? Pick a built-in sound target instead.</p></div>
   <div id="tab-file" hidden><label class="drop" id="dropRef">Drop reference audio or click to choose
     <input type="file" id="ref" accept="audio/*" hidden></label></div>
 </div>
@@ -76,10 +78,10 @@ wireDrop($('dropTrack'),$('track'),f=>{trackFile=f;setBox($('dropTrack'),f);upda
 wireDrop($('dropRef'),$('ref'),f=>{refFile=f;setBox($('dropRef'),f);update()});
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
   tab=b.dataset.tab;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
-  $('tab-spotify').hidden=tab!=='spotify';$('tab-file').hidden=tab!=='file';update()});
+  $('tab-spotify').hidden=tab!=='spotify';$('tab-file').hidden=tab!=='file';$('tab-preset').hidden=tab!=='preset';update()});
 $('link').oninput=update;
-function update(){$('go').disabled=!(trackFile&&(tab==='file'?refFile:$('link').value.trim()))}
-fetch('/api/config').then(r=>r.json()).then(c=>{$('searchBox').hidden=!c.spotify_search});
+function update(){$('go').disabled=!(trackFile&&(tab==='preset'?$('preset').value:tab==='file'?refFile:$('link').value.trim()))}
+fetch('/api/config').then(r=>r.json()).then(c=>{for(const[k,v]of Object.entries(c.presets||{}))$('preset').add(new Option(v,k));$('searchBox').hidden=!c.spotify_search});
 let t;$('q').oninput=()=>{clearTimeout(t);t=setTimeout(async()=>{
   const q=$('q').value.trim();if(!q){$('results').innerHTML='';return}
   const r=await fetch('/api/spotify/search?q='+encodeURIComponent(q));if(!r.ok)return;
@@ -90,7 +92,7 @@ let t;$('q').oninput=()=>{clearTimeout(t);t=setTimeout(async()=>{
 $('go').onclick=async()=>{
   $('err').textContent='';$('go').disabled=true;$('go').textContent='Mastering… this can take a minute';
   const fd=new FormData();fd.append('track',trackFile);
-  if(tab==='file')fd.append('reference',refFile);else fd.append('spotify_link',$('link').value.trim());
+  if(tab==='preset')fd.append('preset',$('preset').value);else if(tab==='file')fd.append('reference',refFile);else fd.append('spotify_link',$('link').value.trim());
   try{
     const r=await fetch('/api/master',{method:'POST',body:fd});const raw=await r.text();let j=null;
     try{j=JSON.parse(raw)}catch(_){}

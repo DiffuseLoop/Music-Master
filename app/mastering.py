@@ -8,9 +8,29 @@ from scipy import signal
 from scipy.ndimage import minimum_filter1d, uniform_filter1d
 
 MAX_EQ_DB = 9.0          # never boost/cut more than this at any frequency
+PRESET_STRENGTH = 0.6    # fraction of the gap to a built-in preset that gets corrected
+PRESET_MAX_EQ_DB = 6.0
 CEILING_DB = -1.0        # output peak ceiling (dBFS)
 LOUDNESS_RANGE = (-20.0, -6.0)  # clamp for the target LUFS taken from the reference
 FFT = 8192
+
+
+# Built-in targets for when there is no reference track. Tonal balance is in
+# 1/3-octave band energy relative to pink noise (flat = pink), loudness in LUFS.
+PRESETS = {
+    "modern_rock": {
+        "label": "Modern instrumental rock",
+        "lufs": -10.0,
+        "balance": [(30, -4), (50, 3), (100, 4), (200, 2), (400, -1), (800, -2), (1600, -3),
+                    (3000, -2), (6000, -5), (10000, -9), (16000, -14), (20000, -18)],
+    },
+}
+
+
+def _preset_spectrum(freqs, preset):
+    pts = np.array(preset["balance"], dtype=float)
+    band = np.interp(np.log10(np.maximum(freqs, 1)), np.log10(pts[:, 0]), pts[:, 1])
+    return band - 10 * np.log10(np.maximum(freqs, 1))   # band energy -> PSD
 
 
 @dataclass
@@ -109,17 +129,23 @@ def _smooth_octave(freqs, db, fraction=3):
     return out
 
 
-def _eq_curve(audio, ref, sr):
+def _eq_curve(audio, ref, sr, preset=None):
     freqs, a = _avg_spectrum(audio, sr)
-    _, r = _avg_spectrum(ref, sr)
+    r = _preset_spectrum(freqs, preset) if preset else _avg_spectrum(ref, sr)[1]
     a_s, r_s = _smooth_octave(freqs, a), _smooth_octave(freqs, r)
     diff = r_s - a_s
     # Overall level is handled by loudness matching, so centre the curve on the mids.
     mid = (freqs > 200) & (freqs < 4000)
     diff -= np.median(diff[mid])
-    diff = np.clip(diff, -MAX_EQ_DB, MAX_EQ_DB)
+    if preset:
+        r_s = r_s - np.median((r_s - a_s)[mid])   # draw the preset at the track's level
+    if preset:
+        diff = np.clip(diff * PRESET_STRENGTH, -PRESET_MAX_EQ_DB, PRESET_MAX_EQ_DB)  # generic target: be gentler
+    else:
+        diff = np.clip(diff, -MAX_EQ_DB, MAX_EQ_DB)
     # Roll the correction off at the extremes where estimates are unreliable.
     diff[freqs < 30] *= 0.0
+    diff[freqs < 45] = np.minimum(diff[freqs < 45], 0)   # never boost sub-bass
     top = min(20000, sr / 2 * 0.95)
     diff[freqs > top] = 0.0
     return freqs, diff, a_s, r_s
@@ -195,21 +221,22 @@ def _match_loudness(audio, sr, target_lufs):
     return y
 
 
-def master(target_path, reference_path, output_path, max_seconds=None):
+def master(target_path, reference_path, output_path, max_seconds=None, preset=None):
+    """Master `target_path` to match `reference_path`, or a built-in `preset` (a PRESETS key)."""
+    p = PRESETS[preset] if preset else None
     audio, sr = load_audio(target_path, max_seconds=max_seconds)
-    ref, _ = load_audio(reference_path, sr=sr)
+    ref = None if p else load_audio(reference_path, sr=sr)[0]
     in_lufs, in_peak = _lufs(audio, sr), _peak_db(audio)
-    ref_lufs = _lufs(ref, sr)
+    ref_lufs = p["lufs"] if p else _lufs(ref, sr)
 
-    freqs, eq, a_s, r_s = _eq_curve(audio, ref, sr)
+    freqs, eq, a_s, r_s = _eq_curve(audio, ref, sr, p)
     y = _apply_eq(audio, freqs, eq, sr)
     del audio
-    y, width_k = _match_width(y, ref)
+    y, width_k = (y, 1.0) if p else _match_width(y, ref)
 
     target = float(np.clip(ref_lufs, *LOUDNESS_RANGE))
     y = _match_loudness(y, sr, target)
     sf.write(output_path, y, sr, subtype="PCM_24")
-
     # decimate spectra to log-spaced points for the UI
     pts = np.geomspace(30, min(18000, sr / 2 * 0.9), 96)
     idx = np.searchsorted(freqs, pts)

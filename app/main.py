@@ -31,7 +31,8 @@ async def _save(upload: UploadFile, dest: Path):
 
 @app.get("/api/config")
 def config():
-    return {"spotify_search": spotify.search_enabled()}
+    return {"spotify_search": spotify.search_enabled(),
+            "presets": {k: v["label"] for k, v in mastering.PRESETS.items()}}
 
 
 @app.get("/api/spotify/search")
@@ -44,8 +45,10 @@ def spotify_search(q: str):
 
 @app.post("/api/master")
 async def master(track: UploadFile = File(...), reference: UploadFile | None = File(None),
-                 spotify_link: str = Form("")):
-    if not reference and not spotify_link.strip():
+                 spotify_link: str = Form(""), preset: str = Form("")):
+    if preset and preset not in mastering.PRESETS:
+        raise HTTPException(400, "Unknown preset.")
+    if not reference and not spotify_link.strip() and not preset:
         raise HTTPException(400, "Provide a reference file or a Spotify link.")
     job = uuid.uuid4().hex
     d = JOBS / job
@@ -53,7 +56,9 @@ async def master(track: UploadFile = File(...), reference: UploadFile | None = F
     try:
         await _save(track, d / "track")
         ref_name = reference.filename if reference else ""
-        if reference:
+        if preset:
+            ref_name = mastering.PRESETS[preset]["label"]
+        elif reference:
             await _save(reference, d / "reference")
         else:
             try:
@@ -62,7 +67,7 @@ async def master(track: UploadFile = File(...), reference: UploadFile | None = F
                 raise HTTPException(400, str(e))
             (d / "reference").write_bytes(audio)
         try:
-            report = mastering.master(d / "track", d / "reference", d / "mastered.wav", MAX_SECONDS)
+            report = mastering.master(d / "track", d / "reference", d / "mastered.wav", MAX_SECONDS, preset or None)
         except (RuntimeError, ValueError) as e:
             raise HTTPException(422, str(e) if "limit is" in str(e) else f"Couldn't read audio: {e}. Use WAV, FLAC, MP3 or OGG.")
     except Exception:

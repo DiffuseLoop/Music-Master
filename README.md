@@ -6,6 +6,8 @@ Reference-based automatic mastering. Upload a track, give it a reference (a Spot
 - **Stereo width** – side/mid ratio matching
 - **Loudness** – integrated LUFS (ITU-R BS.1770) matching, with a look-ahead peak limiter at -1 dBFS
 
+No reference track? Choose a built-in preset (currently "Modern instrumental rock"), which applies a gentler EQ toward a generic target curve and -10 LUFS.
+
 ## Run
 
 ```
